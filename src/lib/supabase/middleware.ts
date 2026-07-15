@@ -35,7 +35,20 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isPortalRoute = request.nextUrl.pathname.startsWith("/dashboard");
+  const PORTAL_PREFIXES = [
+    "/dashboard",
+    "/applicants",
+    "/sessions",
+    "/form-builder",
+    "/share",
+    "/staff",
+    "/reports",
+    "/settings",
+    "/upgrade",
+  ];
+  const isPortalRoute = PORTAL_PREFIXES.some((p) =>
+    request.nextUrl.pathname.startsWith(p),
+  );
   if (isPortalRoute && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
