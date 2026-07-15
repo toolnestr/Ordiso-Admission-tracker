@@ -95,7 +95,7 @@ export default async function DashboardPage() {
                       <span className="w-20 shrink-0 text-[12.5px] text-muted-strong">
                         {f.stage}
                       </span>
-                      <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/[0.04]">
+                      <div className="h-2.5 flex-1 overflow-hidden rounded-full track">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-accent/70 to-accent"
                           style={{ width: `${f.pct}%` }}
@@ -120,7 +120,7 @@ export default async function DashboardPage() {
                       {total} / {FREE_TIER_CAP}
                     </span>
                   </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/[0.04]">
+                  <div className="mt-3 h-2 overflow-hidden rounded-full track">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-accent/70 to-accent"
                       style={{

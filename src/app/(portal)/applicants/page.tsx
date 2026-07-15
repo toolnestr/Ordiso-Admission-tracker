@@ -4,13 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
 
 const STATUS_STYLE: Record<string, string> = {
-  Applied: "bg-surface-2 text-muted-strong",
-  Shortlisted: "bg-accent-soft text-accent",
-  Interview: "bg-amber-500/10 text-amber-300",
-  Admitted: "bg-blue-500/10 text-blue-300",
-  Confirmed: "bg-emerald-500/10 text-emerald-300",
-  "Confirmed-Partial": "bg-emerald-500/10 text-emerald-300",
-  Rejected: "bg-red-500/10 text-red-300",
+  Applied: "badge-neutral",
+  Shortlisted: "badge-accent",
+  Interview: "badge-amber",
+  Admitted: "badge-blue",
+  Confirmed: "badge-green",
+  "Confirmed-Partial": "badge-green",
+  Rejected: "badge-red",
 };
 
 function fmtDate(iso: string) {
@@ -118,8 +118,8 @@ export default async function ApplicantsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-[12px] font-medium ${
-                          STATUS_STYLE[a.status] ?? "bg-surface-2 text-muted"
+                        className={`badge ${
+                          STATUS_STYLE[a.status] ?? "badge-neutral"
                         }`}
                       >
                         {a.status}

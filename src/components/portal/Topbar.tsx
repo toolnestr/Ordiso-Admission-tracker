@@ -1,6 +1,7 @@
 import { LogOut } from "lucide-react";
 import { signOut } from "@/app/(portal)/actions";
 import { FREE_TIER_CAP, type PortalContext } from "@/lib/portal";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Topbar({ ctx }: { ctx: PortalContext }) {
   const { institute, session, name, role } = ctx;
@@ -19,7 +20,7 @@ export default function Topbar({ ctx }: { ctx: PortalContext }) {
             {session.name}
           </span>
         ) : (
-          <span className="hidden rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[11.5px] text-amber-300 sm:inline">
+          <span className="badge badge-amber hidden rounded-md px-2 py-1 text-[11.5px] sm:inline">
             No open session
           </span>
         )}
@@ -28,10 +29,10 @@ export default function Topbar({ ctx }: { ctx: PortalContext }) {
       <div className="flex items-center gap-3">
         {institute.plan === "Free" && session && (
           <span
-            className={`rounded-md border px-2 py-1 text-[11.5px] tabular-nums ${
+            className={`rounded-md px-2 py-1 text-[11.5px] tabular-nums ${
               nearCap
-                ? "border-amber-500/20 bg-amber-500/10 text-amber-300"
-                : "border-border bg-surface text-muted"
+                ? "badge badge-amber"
+                : "border border-border bg-surface text-muted"
             }`}
           >
             {count} / {FREE_TIER_CAP} students
@@ -42,6 +43,8 @@ export default function Topbar({ ctx }: { ctx: PortalContext }) {
           <div className="text-[12.5px] font-medium leading-tight">{name}</div>
           <div className="text-[11px] leading-tight text-muted">{role}</div>
         </div>
+
+        <ThemeToggle />
 
         <form action={signOut}>
           <button

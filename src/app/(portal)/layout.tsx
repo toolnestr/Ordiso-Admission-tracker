@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import Sidebar from "@/components/portal/Sidebar";
 import Topbar from "@/components/portal/Topbar";
 import { getPortalContext } from "@/lib/portal";
@@ -8,9 +9,13 @@ export default async function PortalLayout({
   children: React.ReactNode;
 }) {
   const ctx = await getPortalContext();
+  const cookieStore = await cookies();
+  const theme = cookieStore.get("ordiso-theme")?.value === "light"
+    ? "light"
+    : "dark";
 
   return (
-    <div className="min-h-screen">
+    <div className="portal" data-theme={theme}>
       <Sidebar role={ctx.role} />
       <div className="md:pl-60">
         <Topbar ctx={ctx} />
