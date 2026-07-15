@@ -8,7 +8,7 @@ import { SectionHeading } from "./HowItWorks";
 const faqs = [
   {
     q: "Is it really free?",
-    a: "Yes. The free plan lets you manage up to 200 students per admission session, with the full form builder, dashboard, QR sharing, and up to 5 staff seats — no credit card, no setup fee, no time limit.",
+    a: "Yes. The free plan lets you manage up to 200 students per admission session, with the full form builder, dashboard, QR sharing, and up to 3 staff seats — no credit card, no setup fee, no time limit.",
   },
   {
     q: "What happens after 200 students?",

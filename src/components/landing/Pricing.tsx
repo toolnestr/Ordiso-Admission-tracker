@@ -10,7 +10,7 @@ const freeFeatures = [
   "Custom form builder",
   "Public link and QR code",
   "Full dashboard and analytics",
-  "Up to 5 staff seats",
+  "Up to 3 staff seats",
   "Fee tracking and interviews",
 ];
 

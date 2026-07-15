@@ -77,3 +77,6 @@ export async function getPortalContext(): Promise<PortalContext> {
 }
 
 export const FREE_TIER_CAP = 200;
+
+/** Max staff accounts (any mix of roles) on the Free plan. */
+export const FREE_STAFF_SEATS = 3;

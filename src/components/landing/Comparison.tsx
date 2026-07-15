@@ -10,7 +10,7 @@ const rows: { label: string; free: boolean; premium: boolean }[] = [
   { label: "Custom drag-and-drop form builder", free: true, premium: true },
   { label: "Public link and QR code sharing", free: true, premium: true },
   { label: "Full dashboard and analytics", free: true, premium: true },
-  { label: "Up to 5 staff seats", free: true, premium: true },
+  { label: "Up to 3 staff seats", free: true, premium: true },
   { label: "Interview scheduling and fee tracking", free: true, premium: true },
   { label: "Unlimited students", free: false, premium: true },
   { label: "Unlimited staff seats", free: false, premium: true },
