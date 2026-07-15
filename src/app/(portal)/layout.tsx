@@ -15,7 +15,10 @@ export default async function PortalLayout({
     : "dark";
 
   return (
-    <div className="portal" data-theme={theme}>
+    <div
+      className="portal min-h-dvh bg-background text-foreground"
+      data-theme={theme}
+    >
       <Sidebar role={ctx.role} />
       <div className="md:pl-60">
         <Topbar ctx={ctx} />

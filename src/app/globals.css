@@ -84,11 +84,11 @@
 }
 
 /* Portal theming: the wrapper carries its own background/text so the light
-   theme fully covers the dark body underneath. */
+   theme fully covers the dark body underneath. Background/text are applied
+   via Tailwind utilities on the element (bg-background text-foreground) so
+   they resolve against the token overrides below. */
 .portal {
   min-height: 100dvh;
-  background: var(--background);
-  color: var(--foreground);
 }
 
 /* Theme-aware status badge + track helpers (used across portal tables). */
