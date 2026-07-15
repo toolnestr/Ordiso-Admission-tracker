@@ -107,15 +107,17 @@ export default async function ApplicantsPage() {
                     className="border-b border-border transition-colors last:border-0 hover:bg-surface"
                   >
                     <td className="px-4 py-3">
-                      <div className="font-medium">
-                        {displayName(
-                          a.form_data as Record<string, unknown>,
-                          a.email || a.phone || "Unknown",
+                      <Link href={`/applicants/${a.id}`} className="block">
+                        <div className="font-medium hover:text-accent">
+                          {displayName(
+                            a.form_data as Record<string, unknown>,
+                            a.email || a.phone || "Unknown",
+                          )}
+                        </div>
+                        {a.email && (
+                          <div className="text-[12px] text-muted">{a.email}</div>
                         )}
-                      </div>
-                      {a.email && (
-                        <div className="text-[12px] text-muted">{a.email}</div>
-                      )}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-muted-strong">
                       {fmtDate(a.created_at)}
