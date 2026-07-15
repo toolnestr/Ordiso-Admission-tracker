@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+:root {
+  /* Neutral, near-black base — Linear/Vercel discipline */
+  --background: #08080b;
+  --surface: rgba(255, 255, 255, 0.024);
+  --surface-2: rgba(255, 255, 255, 0.04);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --foreground: #ededf0;
+  --muted: #8a8a94;
+  --muted-strong: #b4b4be;
+
+  /* Single restrained accent (refined indigo-violet) */
+  --accent: #7c74ff;
+  --accent-hover: #8f88ff;
+  --accent-contrast: #ffffff;
+  --accent-soft: rgba(124, 116, 255, 0.14);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv01";
+}
+
+/* Fine surface card */
+.surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.surface-2 {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+/* Subtle top-lit sheen on cards (very low key) */
+.card-sheen {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0) 40%
+    ),
+    var(--surface);
+  border: 1px solid var(--border);
+}
+
+/* Background grid + radial vignette (replaces rainbow aurora) */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* Single soft accent glow — used once, sparingly */
+.accent-glow {
+  background: radial-gradient(
+    50% 50% at 50% 0%,
+    rgba(124, 116, 255, 0.16) 0%,
+    transparent 70%
+  );
+}
+
+/* Hairline gradient divider */
+.hairline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--border-strong),
+    transparent
+  );
+}
+
+/* Premium card: 1px conic border, static (no cartoon spin) */
+.ring-premium {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.ring-premium::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    160deg,
+    rgba(124, 116, 255, 0.55),
+    rgba(124, 116, 255, 0.05) 40%,
+    var(--border) 70%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Focus ring for a11y */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
