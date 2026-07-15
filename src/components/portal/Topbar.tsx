@@ -1,7 +1,6 @@
 import { LogOut } from "lucide-react";
 import { signOut } from "@/app/(portal)/actions";
 import { FREE_TIER_CAP, type PortalContext } from "@/lib/portal";
-import ThemeToggle from "./ThemeToggle";
 
 export default function Topbar({ ctx }: { ctx: PortalContext }) {
   const { institute, session, name, role } = ctx;
@@ -43,8 +42,6 @@ export default function Topbar({ ctx }: { ctx: PortalContext }) {
           <div className="text-[12.5px] font-medium leading-tight">{name}</div>
           <div className="text-[11px] leading-tight text-muted">{role}</div>
         </div>
-
-        <ThemeToggle />
 
         <form action={signOut}>
           <button

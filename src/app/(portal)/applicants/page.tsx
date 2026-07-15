@@ -22,10 +22,14 @@ function fmtDate(iso: string) {
 }
 
 function displayName(form_data: Record<string, unknown>, fallback: string) {
-  const keys = ["full_name", "name", "student_name", "Full Name", "Name"];
-  for (const k of keys) {
-    const v = form_data?.[k];
-    if (typeof v === "string" && v.trim()) return v.trim();
+  if (form_data) {
+    // Prefer any field whose label mentions "name" (case-insensitive),
+    // e.g. "Full name", "Student Name" — labels are institute-defined.
+    for (const [key, val] of Object.entries(form_data)) {
+      if (/name/i.test(key) && typeof val === "string" && val.trim()) {
+        return val.trim();
+      }
+    }
   }
   return fallback;
 }

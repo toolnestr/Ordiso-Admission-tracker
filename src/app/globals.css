@@ -17,10 +17,10 @@
   --accent-contrast: #ffffff;
   --accent-soft: rgba(124, 116, 255, 0.14);
 
-  /* Track fill for progress bars / meters (theme-aware) */
+  /* Track fill for progress bars / meters */
   --track: rgba(255, 255, 255, 0.05);
 
-  /* Semantic status colors (dark defaults; overridden in light below) */
+  /* Semantic status colors */
   --status-neutral-bg: rgba(255, 255, 255, 0.05);
   --status-neutral-fg: var(--muted-strong);
   --status-amber-bg: rgba(245, 158, 11, 0.12);
@@ -31,39 +31,6 @@
   --status-green-fg: #6ee7b7;
   --status-red-bg: rgba(239, 68, 68, 0.12);
   --status-red-fg: #fca5a5;
-}
-
-/* ---------------------------------------------------------------------------
-   Portal light theme — scoped to the (portal) group only (landing/auth stay
-   dark). Token-driven per UI/UX Pro Max: same semantic names, light values,
-   contrast checked independently (all text pairs pass WCAG AA on #fbfbfd).
-   --------------------------------------------------------------------------- */
-.portal[data-theme="light"] {
-  --background: #fbfbfd;
-  --surface: rgba(15, 15, 25, 0.025);
-  --surface-2: rgba(15, 15, 25, 0.05);
-  --border: rgba(15, 15, 25, 0.1);
-  --border-strong: rgba(15, 15, 25, 0.17);
-  --foreground: #1a1a22;
-  --muted: #6a6a76;
-  --muted-strong: #45454f;
-
-  --accent: #5b4fe0;
-  --accent-hover: #4f43d6;
-  --accent-soft: rgba(91, 79, 224, 0.1);
-
-  --track: rgba(15, 15, 25, 0.07);
-
-  --status-neutral-bg: rgba(15, 15, 25, 0.06);
-  --status-neutral-fg: #45454f;
-  --status-amber-bg: rgba(217, 119, 6, 0.12);
-  --status-amber-fg: #b45309;
-  --status-blue-bg: rgba(37, 99, 235, 0.1);
-  --status-blue-fg: #1d4ed8;
-  --status-green-bg: rgba(5, 150, 105, 0.1);
-  --status-green-fg: #047857;
-  --status-red-bg: rgba(220, 38, 38, 0.1);
-  --status-red-fg: #b91c1c;
 }
 
 @theme inline {
@@ -83,15 +50,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Portal theming: the wrapper carries its own background/text so the light
-   theme fully covers the dark body underneath. Background/text are applied
-   via Tailwind utilities on the element (bg-background text-foreground) so
-   they resolve against the token overrides below. */
-.portal {
-  min-height: 100dvh;
-}
-
-/* Theme-aware status badge + track helpers (used across portal tables). */
+/* Semantic status badge + track helpers (used across portal tables). */
 .badge {
   display: inline-block;
   border-radius: 9999px;
@@ -125,12 +84,6 @@
 }
 .track {
   background: var(--track);
-}
-
-/* card-sheen renders its sheen from a white gradient — hide it in light mode
-   so cards stay clean rather than washed. */
-.portal[data-theme="light"] .card-sheen {
-  background: var(--surface);
 }
 
 * {
