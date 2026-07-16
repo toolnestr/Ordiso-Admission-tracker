@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ordiso-admission-tracker",
+  "name": "admission-tracker",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-03-25",
   // nodejs_compat gives us Node built-ins (crypto.randomBytes in the staff
