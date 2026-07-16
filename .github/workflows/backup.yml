@@ -15,16 +15,6 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Install pg_dump 17
-        # Ubuntu's default postgresql-client is older than Supabase's server,
-        # and pg_dump refuses to dump a newer server than itself.
-        run: |
-          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
-          sudo sh -c 'echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-17
-
       - name: Check out the private backup repo
         env:
           TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
@@ -41,16 +31,21 @@ jobs:
 
       - name: Dump the database
         env:
-          # Supabase → Project Settings → Database → Connection string (URI)
+          # Supabase → Connect → Session pooler → URI (IPv4; runners have no IPv6)
           PGURL: ${{ secrets.SUPABASE_DB_URL }}
+        # Runs pg_dump from the postgres:17 image rather than apt.
+        # pg_dump refuses to dump a newer server than itself, and on Ubuntu
+        # /usr/bin/pg_dump is a wrapper that resolves to the DEFAULT cluster
+        # version — so `apt install postgresql-client-17` succeeds while
+        # pg_dump still reports 16.x and aborts on our 17.6 server. Pinning the
+        # image pins the actual binary.
         run: |
           set -euo pipefail
           mkdir -p backups/dumps
           FILE="backups/dumps/backup-$(date -u +%Y-%m-%d).sql"
           # --clean --if-exists makes the dump safely re-runnable on restore.
-          pg_dump "$PGURL" \
-            --clean --if-exists --no-owner --no-privileges \
-            --schema=public --schema=auth \
+          docker run --rm -e PGURL="$PGURL" postgres:17-alpine \
+            sh -c 'pg_dump "$PGURL" --clean --if-exists --no-owner --no-privileges --schema=public --schema=auth' \
             > "$FILE"
           # A dump that silently produced nothing is worse than no dump —
           # fail loudly instead of committing an empty file.
