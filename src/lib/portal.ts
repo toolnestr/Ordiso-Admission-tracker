@@ -40,7 +40,7 @@ export async function getPortalContext(): Promise<PortalContext> {
 
   const { data: staff } = await supabase
     .from("staff")
-    .select("id, name, role, institutes(id, display_name, plan, currency)")
+    .select("id, name, role, institutes(id, display_name, plan, currency, status)")
     .eq("auth_user_id", user.id)
     .single();
 
@@ -49,6 +49,10 @@ export async function getPortalContext(): Promise<PortalContext> {
   const institute = Array.isArray(staff.institutes)
     ? staff.institutes[0]
     : staff.institutes;
+
+  // Suspended/Deactivated institutes lose portal access, matching what the
+  // public form already enforces in get_public_form (Section 3.1).
+  if (institute.status !== "Active") redirect("/suspended");
 
   // Current open session (at most one, enforced by DB unique index).
   const { data: session } = await supabase

@@ -45,6 +45,10 @@ export async function updateSession(request: NextRequest) {
     "/reports",
     "/settings",
     "/upgrade",
+    "/suspended",
+    // /admin additionally checks super-admin membership in its own layout;
+    // this only ensures a signed-out visitor lands on /login.
+    "/admin",
   ];
   const isPortalRoute = PORTAL_PREFIXES.some((p) =>
     request.nextUrl.pathname.startsWith(p),
