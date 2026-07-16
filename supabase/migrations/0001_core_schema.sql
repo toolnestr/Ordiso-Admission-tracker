@@ -47,7 +47,7 @@ create table institutes (
   plan                plan_tier not null default 'Free',
   status              institute_status not null default 'Active',
   timezone            text not null default 'UTC',
-  currency            text not null default 'Rs.',
+  currency            text not null default '$',
   working_hours       text,
   status_page_messages jsonb not null default '{}'::jsonb,
   storage_used_bytes  bigint not null default 0,

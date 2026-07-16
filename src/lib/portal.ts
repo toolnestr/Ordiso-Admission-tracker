@@ -76,7 +76,6 @@ export async function getPortalContext(): Promise<PortalContext> {
   };
 }
 
-export const FREE_TIER_CAP = 200;
-
-/** Max staff accounts (any mix of roles) on the Free plan. */
-export const FREE_STAFF_SEATS = 3;
+// Limits live in lib/limits so client components can read them without
+// pulling this server-only module into the browser bundle.
+export { FREE_TIER_CAP, FREE_STAFF_SEATS } from "@/lib/limits";

@@ -25,6 +25,7 @@ export default function Select({
   placeholder = "Select…",
   required,
   disabled,
+  searchable = false,
   className = "",
 }: {
   name?: string;
@@ -34,15 +35,28 @@ export default function Select({
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
+  /** Adds a filter box — use for long lists (timezones, currencies). */
+  searchable?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const id = useId();
 
   const selected = options.find((o) => o.value === value);
+
+  const shown =
+    searchable && query.trim()
+      ? options.filter((o) =>
+          `${o.label} ${o.description ?? ""}`
+            .toLowerCase()
+            .includes(query.trim().toLowerCase()),
+        )
+      : options;
 
   // Close on outside click / Escape.
   useEffect(() => {
@@ -70,13 +84,15 @@ export default function Select({
 
   function openList() {
     if (disabled) return;
+    setQuery("");
     const i = options.findIndex((o) => o.value === value);
     setActive(i >= 0 ? i : 0);
     setOpen(true);
+    if (searchable) setTimeout(() => searchRef.current?.focus(), 0);
   }
 
   function choose(i: number) {
-    const opt = options[i];
+    const opt = shown[i];
     if (!opt) return;
     onChange(opt.value);
     setOpen(false);
@@ -93,7 +109,7 @@ export default function Select({
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive((a) => Math.min(a + 1, options.length - 1));
+      setActive((a) => Math.min(a + 1, shown.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive((a) => Math.max(a - 1, 0));
@@ -102,8 +118,12 @@ export default function Select({
       setActive(0);
     } else if (e.key === "End") {
       e.preventDefault();
-      setActive(options.length - 1);
-    } else if (e.key === "Enter" || e.key === " ") {
+      setActive(shown.length - 1);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      choose(active);
+    } else if (e.key === " " && !searchable) {
+      // With a filter box, space must type a space rather than select.
       e.preventDefault();
       choose(active);
     } else if (e.key === "Tab") {
@@ -137,44 +157,70 @@ export default function Select({
       </button>
 
       {open && (
-        <ul
-          id={`${id}-list`}
-          ref={listRef}
-          role="listbox"
-          tabIndex={-1}
-          className="absolute z-50 mt-1.5 max-h-64 w-full overflow-y-auto rounded-xl border border-border-strong bg-[#12121a] p-1 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.85)]"
-        >
-          {options.map((o, i) => {
-            const isSel = o.value === value;
-            return (
-              <li
-                key={o.value}
-                role="option"
-                aria-selected={isSel}
-                onMouseEnter={() => setActive(i)}
-                onClick={() => choose(i)}
-                className={`flex cursor-pointer items-start gap-2 rounded-lg px-2.5 py-2 text-[13.5px] ${
-                  i === active ? "bg-surface-2" : ""
-                }`}
-              >
-                <span className="flex-1">
-                  <span className={isSel ? "font-medium" : ""}>{o.label}</span>
-                  {o.description && (
-                    <span className="mt-0.5 block text-[12px] text-muted">
-                      {o.description}
+        <div className="absolute z-50 mt-1.5 w-full overflow-hidden rounded-xl border border-border-strong bg-[#12121a] shadow-[0_16px_48px_-12px_rgba(0,0,0,0.85)]">
+          {searchable && (
+            <div className="border-b border-border p-1.5">
+              <input
+                ref={searchRef}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setActive(0);
+                }}
+                onKeyDown={onKeyDown}
+                placeholder="Search…"
+                className="w-full rounded-lg bg-surface-2 px-2.5 py-1.5 text-[13.5px] outline-none placeholder:text-muted"
+              />
+            </div>
+          )}
+
+          {shown.length === 0 ? (
+            <p className="px-3 py-4 text-center text-[13px] text-muted">
+              No matches
+            </p>
+          ) : (
+            <ul
+              id={`${id}-list`}
+              ref={listRef}
+              role="listbox"
+              tabIndex={-1}
+              className="max-h-60 overflow-y-auto p-1"
+            >
+              {shown.map((o, i) => {
+                const isSel = o.value === value;
+                return (
+                  <li
+                    key={o.value}
+                    role="option"
+                    aria-selected={isSel}
+                    onMouseEnter={() => setActive(i)}
+                    onClick={() => choose(i)}
+                    className={`flex cursor-pointer items-start gap-2 rounded-lg px-2.5 py-2 text-[13.5px] ${
+                      i === active ? "bg-surface-2" : ""
+                    }`}
+                  >
+                    <span className="flex-1">
+                      <span className={isSel ? "font-medium" : ""}>
+                        {o.label}
+                      </span>
+                      {o.description && (
+                        <span className="mt-0.5 block text-[12px] text-muted">
+                          {o.description}
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
-                {isSel && (
-                  <Check
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent"
-                    strokeWidth={2.5}
-                  />
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                    {isSel && (
+                      <Check
+                        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent"
+                        strokeWidth={2.5}
+                      />
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );
