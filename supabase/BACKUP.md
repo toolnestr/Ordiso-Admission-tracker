@@ -12,24 +12,24 @@ Both can also be run by hand from the **Actions** tab (`Run workflow`).
 
 ## One-time setup
 
-**1. Create a private repo for the dumps** — e.g. `ordiso-backups`.
+**1. Private repo for the dumps:** `toolnestr/Admission-Tracker-Backup`.
 It **must be private**: dumps contain applicant names, emails, and phone
 numbers. A public backup repo is a data breach.
 
 **2. Create a GitHub token** so this repo can push to that one.
 GitHub → Settings → Developer settings → Personal access tokens → Fine-grained:
-- Repository access: only `ordiso-backups`
+- Repository access: only `Admission-Tracker-Backup`
 - Permissions: **Contents: Read and write**
 
-**3. Add four secrets** to *this* repo
+**3. Add five secrets** to *this* repo
 (Settings → Secrets and variables → Actions → New repository secret):
 
 | Secret | Value |
 |---|---|
-| `BACKUP_REPO` | `your-username/ordiso-backups` |
+| `BACKUP_REPO` | `toolnestr/Admission-Tracker-Backup` |
 | `BACKUP_REPO_TOKEN` | the token from step 2 |
 | `SUPABASE_DB_URL` | Supabase → Project Settings → Database → **Connection string → URI** (swap in your DB password) |
-| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `SUPABASE_URL` | `https://iaqdmgejswhogyxzsydt.supabase.co` |
 | `SUPABASE_ANON_KEY` | your public anon key |
 
 **4. Run `Nightly database backup` manually** and confirm a
