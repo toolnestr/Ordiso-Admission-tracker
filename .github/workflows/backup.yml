@@ -26,11 +26,18 @@ jobs:
           sudo apt-get install -y postgresql-client-17
 
       - name: Check out the private backup repo
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ secrets.BACKUP_REPO }}
-          token: ${{ secrets.BACKUP_REPO_TOKEN }}
-          path: backups
+        env:
+          TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+          REPO: ${{ secrets.BACKUP_REPO }}
+        # Cloned by hand rather than with actions/checkout: a brand-new backup
+        # repo has no commits, so `main` doesn't exist yet and checkout fails
+        # with "couldn't find remote ref refs/heads/main". Cloning tolerates an
+        # empty repo, and -B creates the branch on the first run.
+        run: |
+          set -euo pipefail
+          git clone "https://x-access-token:${TOKEN}@github.com/${REPO}.git" backups
+          cd backups
+          git checkout -B main
 
       - name: Dump the database
         env:
@@ -67,5 +74,6 @@ jobs:
             echo "No changes to commit."
           else
             git commit -m "Backup $(date -u +%Y-%m-%d)"
-            git push
+            # -u sets upstream on the very first push, when main is brand new.
+            git push -u origin main
           fi
