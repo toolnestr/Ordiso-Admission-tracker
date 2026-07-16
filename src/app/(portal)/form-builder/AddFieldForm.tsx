@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { AlertCircle, Plus, X } from "lucide-react";
+import Select from "@/components/ui/Select";
 import { addField, type FieldActionState } from "./actions";
 
 const initial: FieldActionState = { error: null };
@@ -67,23 +68,17 @@ export default function AddFieldForm({ isPremium }: { isPremium: boolean }) {
           />
         </label>
 
-        <label className="block">
-          <span className="text-[13px] font-medium text-muted-strong">
+        <div className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-muted-strong">
             Field type
           </span>
-          <select
+          <Select
             name="field_type"
             value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="surface-2 mt-1.5 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
-          >
-            {TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            onChange={setType}
+            options={TYPES}
+          />
+        </div>
 
         {showOptions && (
           <label className="block">

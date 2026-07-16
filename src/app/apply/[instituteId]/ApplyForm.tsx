@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle2, Copy, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import Select from "@/components/ui/Select";
+import DatePicker from "@/components/ui/DatePicker";
 
 export type PublicField = {
   id: string;
@@ -102,19 +104,15 @@ export default function ApplyForm({
       <div className="mt-6 space-y-5">
         {form.programs.length > 0 && (
           <FieldWrap label="Program" required>
-            <select
-              required
+            <Select
               value={programId}
-              onChange={(e) => setProgramId(e.target.value)}
-              className="surface-2 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
-            >
-              <option value="">Select a program…</option>
-              {form.programs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onChange={setProgramId}
+              placeholder="Select a program…"
+              options={form.programs.map((p) => ({
+                value: p.id,
+                label: p.name,
+              }))}
+            />
           </FieldWrap>
         )}
 
@@ -211,19 +209,19 @@ function FieldRenderer({
   if (type === "dropdown") {
     return (
       <FieldWrap label={label} required={required}>
-        <select
-          required={required}
+        <Select
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={INPUT}
-        >
-          <option value="">Select…</option>
-          {options.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
+          onChange={onChange}
+          options={options.map((o) => ({ value: o, label: o }))}
+        />
+      </FieldWrap>
+    );
+  }
+
+  if (type === "date") {
+    return (
+      <FieldWrap label={label} required={required}>
+        <DatePicker value={value} onChange={onChange} />
       </FieldWrap>
     );
   }
@@ -284,9 +282,7 @@ function FieldRenderer({
         ? "tel"
         : type === "number"
           ? "number"
-          : type === "date"
-            ? "date"
-            : "text";
+          : "text";
 
   return (
     <FieldWrap label={label} required={required}>

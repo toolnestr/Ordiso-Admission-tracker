@@ -18,6 +18,7 @@ import {
   addCommunication,
   type ActionState,
 } from "./actions";
+import Select from "@/components/ui/Select";
 import type { StaffRole } from "@/lib/portal";
 
 type Fee = {
@@ -465,7 +466,9 @@ function NotesTab({
   );
 }
 
-const COMM_TYPES = ["Call", "WhatsApp", "Email", "In-Person", "Other"];
+const COMM_TYPES = ["Call", "WhatsApp", "Email", "In-Person", "Other"].map(
+  (t) => ({ value: t, label: t }),
+);
 
 function StatusTab({
   applicantId,
@@ -477,6 +480,7 @@ function StatusTab({
   role: StaffRole;
 }) {
   const [state, action, pending] = useActionState(addCommunication, initial);
+  const [commType, setCommType] = useState("Call");
   const canEdit = role !== "Viewer";
 
   const last = comms[0];
@@ -495,21 +499,17 @@ function StatusTab({
         <form action={action} className="card-sheen space-y-3 rounded-xl p-4">
           <input type="hidden" name="applicant_id" value={applicantId} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="text-[13px] font-medium text-muted-strong">
+            <div className="block">
+              <span className="mb-1.5 block text-[13px] font-medium text-muted-strong">
                 Type
               </span>
-              <select
+              <Select
                 name="type"
-                className="surface-2 mt-1.5 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
-              >
-                {COMM_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
+                value={commType}
+                onChange={setCommType}
+                options={COMM_TYPES}
+              />
+            </div>
             <label className="block">
               <span className="text-[13px] font-medium text-muted-strong">
                 Outcome <span className="font-normal text-muted">(optional)</span>

@@ -2,9 +2,20 @@
 
 import { useActionState, useState } from "react";
 import { AlertCircle, Check, Copy, Plus, Sparkles, X } from "lucide-react";
+import Select from "@/components/ui/Select";
 import { inviteStaff, type StaffActionState } from "./actions";
 
 const initial: StaffActionState = { error: null };
+
+const ROLE_OPTIONS = [
+  { value: "Admin", label: "Admin", description: "Full access" },
+  {
+    value: "Counselor",
+    label: "Counselor",
+    description: "Manage applicants, record payments",
+  },
+  { value: "Viewer", label: "Viewer", description: "Read-only" },
+];
 
 export default function InviteForm({
   atCap,
@@ -14,6 +25,7 @@ export default function InviteForm({
   seatLimit: number;
 }) {
   const [open, setOpen] = useState(false);
+  const [role, setRole] = useState("Counselor");
   const [state, action, pending] = useActionState(inviteStaff, initial);
 
   if (state.inviteUrl) {
@@ -82,20 +94,17 @@ export default function InviteForm({
           </label>
         </div>
 
-        <label className="block">
-          <span className="text-[13px] font-medium text-muted-strong">Role</span>
-          <select
+        <div className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-muted-strong">
+            Role
+          </span>
+          <Select
             name="role"
-            defaultValue="Counselor"
-            className="surface-2 mt-1.5 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
-          >
-            <option value="Admin">Admin — full access</option>
-            <option value="Counselor">
-              Counselor — manage applicants, record payments
-            </option>
-            <option value="Viewer">Viewer — read-only</option>
-          </select>
-        </label>
+            value={role}
+            onChange={setRole}
+            options={ROLE_OPTIONS}
+          />
+        </div>
 
         {state.error && (
           <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-[13px] text-red-300">

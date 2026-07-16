@@ -2,12 +2,15 @@
 
 import { useActionState, useState } from "react";
 import { AlertCircle, Plus, X } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 import { createSession, type SessionActionState } from "./actions";
 
 const initial: SessionActionState = { error: null };
 
 export default function NewSessionForm({ hasOpen }: { hasOpen: boolean }) {
   const [open, setOpen] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [state, action, pending] = useActionState(createSession, initial);
 
   if (!open) {
@@ -53,28 +56,29 @@ export default function NewSessionForm({ hasOpen }: { hasOpen: boolean }) {
             className="surface-2 mt-1.5 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
           />
         </label>
-        <label className="block">
-          <span className="text-[13px] font-medium text-muted-strong">
+        <div className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-muted-strong">
             Start date
           </span>
-          <input
+          <DatePicker
             name="start_date"
-            type="date"
+            value={startDate}
+            onChange={setStartDate}
             required
-            className="surface-2 mt-1.5 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
           />
-        </label>
-        <label className="block">
-          <span className="text-[13px] font-medium text-muted-strong">
+        </div>
+        <div className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-muted-strong">
             End date
           </span>
-          <input
+          <DatePicker
             name="end_date"
-            type="date"
+            value={endDate}
+            onChange={setEndDate}
+            min={startDate || undefined}
             required
-            className="surface-2 mt-1.5 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
           />
-        </label>
+        </div>
         <label className="block sm:col-span-2">
           <span className="text-[13px] font-medium text-muted-strong">
             Target admissions{" "}

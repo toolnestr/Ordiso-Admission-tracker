@@ -2,7 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { Check, Copy, Link2, Trash2 } from "lucide-react";
+import Select from "@/components/ui/Select";
 import { changeRole, removeStaff, revokeInvite, resendInvite } from "./actions";
+
+const ROLE_OPTIONS = [
+  { value: "Admin", label: "Admin" },
+  { value: "Counselor", label: "Counselor" },
+  { value: "Viewer", label: "Viewer" },
+];
 
 export function RoleSelect({
   staffId,
@@ -18,19 +25,13 @@ export function RoleSelect({
     return <span className="text-[13px] text-muted-strong">{role}</span>;
   }
   return (
-    <select
+    <Select
+      className="w-36"
       value={role}
       disabled={pending}
-      onChange={(e) => {
-        const next = e.target.value;
-        start(() => changeRole(staffId, next));
-      }}
-      className="surface-2 rounded-lg px-2 py-1 text-[12.5px] outline-none focus:border-border-strong disabled:opacity-50"
-    >
-      <option value="Admin">Admin</option>
-      <option value="Counselor">Counselor</option>
-      <option value="Viewer">Viewer</option>
-    </select>
+      onChange={(next) => start(() => changeRole(staffId, next))}
+      options={ROLE_OPTIONS}
+    />
   );
 }
 
