@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ordiso-admission-tracker",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-25",
+  // nodejs_compat gives us Node built-ins (crypto.randomBytes in the staff
+  // invite flow, Buffer, etc.). Required by OpenNext.
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // Env vars (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  // SUPABASE_SERVICE_ROLE_KEY) are NOT set here — they'd be committed to git.
+  // Set them in the Cloudflare dashboard (Workers → Settings → Variables),
+  // with the service-role key marked as a Secret. See DEPLOY.md.
+}
