@@ -1,0 +1,71 @@
+name: Nightly database backup
+
+# Supabase's free plan has NO backups (Section 2.9a). This dumps the whole
+# database every night into a PRIVATE repo, so a disaster costs at most one
+# day of data instead of everything.
+
+on:
+  schedule:
+    # 02:00 UTC daily. GitHub queues cron jobs, so it may run a little late.
+    - cron: "0 2 * * *"
+  # Lets you run it by hand from the Actions tab — use this for the first test.
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install pg_dump 17
+        # Ubuntu's default postgresql-client is older than Supabase's server,
+        # and pg_dump refuses to dump a newer server than itself.
+        run: |
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
+          sudo sh -c 'echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Check out the private backup repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.BACKUP_REPO }}
+          token: ${{ secrets.BACKUP_REPO_TOKEN }}
+          path: backups
+
+      - name: Dump the database
+        env:
+          # Supabase → Project Settings → Database → Connection string (URI)
+          PGURL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p backups/dumps
+          FILE="backups/dumps/backup-$(date -u +%Y-%m-%d).sql"
+          # --clean --if-exists makes the dump safely re-runnable on restore.
+          pg_dump "$PGURL" \
+            --clean --if-exists --no-owner --no-privileges \
+            --schema=public --schema=auth \
+            > "$FILE"
+          # A dump that silently produced nothing is worse than no dump —
+          # fail loudly instead of committing an empty file.
+          if [ ! -s "$FILE" ] || [ "$(wc -c < "$FILE")" -lt 1000 ]; then
+            echo "::error::Dump is empty or suspiciously small — failing."
+            exit 1
+          fi
+          echo "Dump size: $(du -h "$FILE" | cut -f1)"
+
+      - name: Prune dumps older than 30 days
+        run: find backups/dumps -name 'backup-*.sql' -mtime +30 -delete
+
+      - name: Commit the backup
+        working-directory: backups
+        run: |
+          git config user.name "ordiso-backup-bot"
+          git config user.email "actions@github.com"
+          git add dumps
+          # Nothing to commit is normal if a re-run produced an identical file.
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Backup $(date -u +%Y-%m-%d)"
+            git push
+          fi

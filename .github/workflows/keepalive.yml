@@ -1,0 +1,35 @@
+name: Supabase keep-alive
+
+# Supabase pauses free projects after ~1 week of inactivity — the whole
+# platform goes down until someone restores it by hand (Section 2.9a).
+# A trivial daily query counts as activity and prevents that.
+
+on:
+  schedule:
+    - cron: "30 3 * * *" # 03:30 UTC daily
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          # Calls the public RPC with a nonexistent institute. It touches the
+          # database (which is the point) and returns a normal, harmless
+          # "institute_not_found" — no data, no auth needed.
+          CODE=$(curl -sS -o /tmp/out.json -w '%{http_code}' \
+            -X POST "$SUPABASE_URL/rest/v1/rpc/get_public_form" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"p_institute_id":"00000000-0000-0000-0000-000000000000"}')
+          echo "HTTP $CODE — $(cat /tmp/out.json)"
+          # A paused/unreachable project is exactly what we need to hear about.
+          if [ "$CODE" != "200" ]; then
+            echo "::error::Supabase did not respond 200 — it may be paused or down."
+            exit 1
+          fi
