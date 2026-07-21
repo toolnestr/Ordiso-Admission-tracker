@@ -5,48 +5,44 @@ import { useActionState } from "react";
 import { AlertCircle } from "lucide-react";
 import AuthShell from "@/components/auth/AuthShell";
 import Field from "@/components/auth/Field";
-import { login, type LoginState } from "./actions";
+import { setNewPassword, type ResetPasswordState } from "./actions";
 
-const initialState: LoginState = { error: null };
+const initialState: ResetPasswordState = { error: null };
 
-export default function LoginPage() {
-  const [state, formAction, pending] = useActionState(login, initialState);
+export default function ResetPasswordPage() {
+  const [state, formAction, pending] = useActionState(
+    setNewPassword,
+    initialState,
+  );
 
   return (
     <AuthShell
-      title="Log in"
-      subtitle="Welcome back to your admissions dashboard."
+      title="Set a new password"
+      subtitle="Choose a password you haven't used before."
       footer={
         <>
-          Don&apos;t have an institute yet?{" "}
-          <Link href="/register" className="font-medium text-foreground">
-            Register free
+          Changed your mind?{" "}
+          <Link href="/login" className="font-medium text-foreground">
+            Back to log in
           </Link>
         </>
       }
     >
       <form action={formAction} className="space-y-4">
         <Field
-          label="Email"
-          name="email"
-          type="email"
-          autoComplete="email"
-        />
-        <Field
-          label="Password"
+          label="New password"
           name="password"
           type="password"
-          autoComplete="current-password"
+          autoComplete="new-password"
+          minLength={8}
         />
-
-        <div className="flex justify-end">
-          <Link
-            href="/forgot-password"
-            className="text-[13px] text-muted transition-colors hover:text-foreground"
-          >
-            Forgot password?
-          </Link>
-        </div>
+        <Field
+          label="Confirm new password"
+          name="confirm_password"
+          type="password"
+          autoComplete="new-password"
+          minLength={8}
+        />
 
         {state.error && (
           <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-[13px] text-red-300">
@@ -60,7 +56,7 @@ export default function LoginPage() {
           disabled={pending}
           className="mt-2 w-full rounded-lg bg-foreground py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
         >
-          {pending ? "Logging in…" : "Log in"}
+          {pending ? "Updating…" : "Update password"}
         </button>
       </form>
     </AuthShell>
