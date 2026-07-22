@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Users, Share2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
+import NewEnquiry from "./NewEnquiry";
+import type { PublicField } from "@/app/apply/[instituteId]/ApplyForm";
 
 const STATUS_STYLE: Record<string, string> = {
   Applied: "badge-neutral",
@@ -47,6 +49,37 @@ export default async function ApplicantsPage() {
 
   const list = applicants ?? [];
 
+  // Staff manual-entry: Admin/Counselor can add a walk-in enquiry when a
+  // session is open. Fetch the institute's own form fields + programs (RLS
+  // scopes both to this institute) so the modal mirrors the public form.
+  const canAddEnquiry = ctx.role !== "Viewer" && !!ctx.session;
+  let enquiryFields: PublicField[] = [];
+  let enquiryPrograms: { id: string; name: string }[] = [];
+  if (canAddEnquiry) {
+    const [{ data: fieldRows }, { data: programRows }] = await Promise.all([
+      supabase
+        .from("form_fields")
+        .select(
+          "id, field_label, field_type, is_required, options, is_document_field, display_order",
+        )
+        .eq("institute_id", ctx.institute.id)
+        .order("display_order", { ascending: true }),
+      supabase
+        .from("programs")
+        .select("id, name")
+        .eq("institute_id", ctx.institute.id),
+    ]);
+    enquiryFields = (fieldRows ?? []).map((f) => ({
+      id: f.id as string,
+      label: f.field_label as string,
+      type: f.field_type as string,
+      required: !!f.is_required,
+      options: (f.options as string[]) ?? [],
+      is_document_field: !!f.is_document_field,
+    }));
+    enquiryPrograms = (programRows ?? []) as { id: string; name: string }[];
+  }
+
   return (
     <div>
       <div className="flex items-start justify-between gap-4">
@@ -60,13 +93,23 @@ export default async function ApplicantsPage() {
               : "Applicants"}
           </h1>
         </div>
-        <Link
-          href="/share"
-          className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3.5 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90"
-        >
-          <Share2 className="h-4 w-4" strokeWidth={1.8} />
-          Share form
-        </Link>
+        <div className="flex items-center gap-2">
+          {canAddEnquiry && (
+            <NewEnquiry
+              instituteId={ctx.institute.id}
+              fields={enquiryFields}
+              programs={enquiryPrograms}
+              isPremium={ctx.institute.plan === "Premium"}
+            />
+          )}
+          <Link
+            href="/share"
+            className="surface-2 inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-[13px] font-medium transition-colors hover:bg-[var(--border)]"
+          >
+            <Share2 className="h-4 w-4" strokeWidth={1.8} />
+            Share form
+          </Link>
+        </div>
       </div>
 
       <div className="mt-6">

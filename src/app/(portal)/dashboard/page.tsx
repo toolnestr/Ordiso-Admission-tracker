@@ -139,7 +139,7 @@ export default async function DashboardPage() {
   return (
     <div>
       <div className="flex items-start justify-between gap-3">
-        <Header name={ctx.name} sessionName={ctx.session.name} />
+        <Header name={ctx.name} />
         <ScreenshotButton
           targetId="dashboard-capture"
           filePrefix="ordiso-dashboard"
@@ -268,7 +268,7 @@ export default async function DashboardPage() {
   );
 }
 
-function Header({ name, sessionName }: { name: string; sessionName?: string }) {
+function Header({ name }: { name: string }) {
   return (
     <>
       <div className="text-[12.5px] font-medium uppercase tracking-[0.18em] text-accent">
@@ -277,11 +277,6 @@ function Header({ name, sessionName }: { name: string; sessionName?: string }) {
       <h1 className="mt-2 text-2xl font-semibold tracking-[-0.02em]">
         Welcome back, {name.split(" ")[0]}
       </h1>
-      {sessionName && (
-        <p className="mt-1 text-[13px] text-muted">
-          Here&apos;s how {sessionName} is tracking.
-        </p>
-      )}
     </>
   );
 }
