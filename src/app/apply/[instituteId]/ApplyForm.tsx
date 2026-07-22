@@ -1,19 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, CheckCircle2, Copy, Lock } from "lucide-react";
+import { AlertCircle, CheckCircle2, Copy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import Select from "@/components/ui/Select";
-import DatePicker from "@/components/ui/DatePicker";
+import { deriveContact } from "@/components/enquiry/fields";
+import StudentBlocks, {
+  newStudent,
+  toGroupPayload,
+  type Student,
+} from "@/components/enquiry/StudentBlocks";
 
-export type PublicField = {
-  id: string;
-  label: string;
-  type: string;
-  required: boolean;
-  options: string[];
-  is_document_field: boolean;
-};
+// Re-exported for callers that still import the field types from here.
+export type { PublicField } from "@/components/enquiry/fields";
 
 export type PublicForm = {
   institute: {
@@ -26,9 +24,18 @@ export type PublicForm = {
     name: string;
     is_full: boolean;
   } | null;
-  fields: PublicField[];
+  fields: {
+    id: string;
+    label: string;
+    type: string;
+    required: boolean;
+    options: string[];
+    is_document_field: boolean;
+  }[];
   programs: { id: string; name: string }[];
 };
+
+type Created = { application_id: string; possible_duplicate: boolean };
 
 export default function ApplyForm({
   form,
@@ -37,94 +44,101 @@ export default function ApplyForm({
   form: PublicForm;
   instituteId: string;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [programId, setProgramId] = useState("");
+  const [students, setStudents] = useState<Student[]>([newStudent()]);
+  const [familyLabel, setFamilyLabel] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ appId: string } | null>(null);
+  const [result, setResult] = useState<Created[] | null>(null);
 
   const isPremium = form.institute.plan === "Premium";
 
-  function set(label: string, v: string) {
-    setValues((prev) => ({ ...prev, [label]: v }));
+  function friendlyError(code?: string) {
+    if (code === "session_full")
+      return "This admission cycle is now full. Please contact the institute.";
+    if (code === "no_open_session" || code === "session_closed")
+      return "Applications are closed right now. Please try again later.";
+    return "Something went wrong submitting your application. Please try again.";
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (form.programs.length > 0 && students.some((s) => !s.programId)) {
+      setError("Please choose a program for every applicant.");
+      return;
+    }
+
     setSubmitting(true);
-
-    // Derive email/phone for duplicate detection from typed fields.
-    let email: string | null = null;
-    let phone: string | null = null;
-    for (const f of form.fields) {
-      if (f.type === "email" && values[f.label]) email = values[f.label];
-      if (f.type === "phone" && values[f.label]) phone = values[f.label];
-    }
-
     const supabase = createClient();
-    const { data, error: rpcErr } = await supabase.rpc("submit_application", {
+
+    if (students.length === 1) {
+      const s = students[0];
+      const { email, phone } = deriveContact(form.fields, s.values);
+      const { data, error: rpcErr } = await supabase.rpc("submit_application", {
+        p_institute_id: instituteId,
+        p_form_data: s.values,
+        p_email: email,
+        p_phone: phone,
+        p_program_id: s.programId || null,
+        p_source: "Direct",
+      });
+      setSubmitting(false);
+      const res = data as {
+        application_id?: string;
+        error?: string;
+        possible_duplicate?: boolean;
+      };
+      if (rpcErr || !res?.application_id) {
+        setError(friendlyError(res?.error));
+        return;
+      }
+      setResult([
+        {
+          application_id: res.application_id,
+          possible_duplicate: !!res.possible_duplicate,
+        },
+      ]);
+      return;
+    }
+
+    const { data, error: rpcErr } = await supabase.rpc("submit_enquiry_group", {
       p_institute_id: instituteId,
-      p_form_data: values,
-      p_email: email,
-      p_phone: phone,
-      p_program_id: programId || null,
-      p_source: "Direct",
+      p_family_label: familyLabel,
+      p_students: toGroupPayload(students, form.fields),
     });
-
     setSubmitting(false);
-
-    if (rpcErr) {
-      setError("Something went wrong submitting your application. Please try again.");
+    const res = data as { students?: Created[]; error?: string };
+    if (rpcErr || !res?.students) {
+      setError(friendlyError(res?.error));
       return;
     }
-    const res = data as { application_id?: string; error?: string };
-    if (res.error === "session_full") {
-      setError("This admission cycle is now full. Please contact the institute.");
-      return;
-    }
-    if (res.error || !res.application_id) {
-      setError("Applications are closed right now. Please try again later.");
-      return;
-    }
-    setResult({ appId: res.application_id });
+    setResult(res.students);
   }
 
   if (result) {
-    return <Confirmation appId={result.appId} />;
+    return <Confirmation created={result} />;
   }
 
   return (
     <form onSubmit={handleSubmit} className="card-sheen rounded-2xl p-6">
-      <h1 className="text-lg font-semibold">Apply to {form.institute.display_name}</h1>
+      <h1 className="text-lg font-semibold">
+        Apply to {form.institute.display_name}
+      </h1>
       {form.session && (
         <p className="mt-1 text-[13px] text-muted">{form.session.name}</p>
       )}
 
-      <div className="mt-6 space-y-5">
-        {form.programs.length > 0 && (
-          <FieldWrap label="Program" required>
-            <Select
-              value={programId}
-              onChange={setProgramId}
-              placeholder="Select a program…"
-              options={form.programs.map((p) => ({
-                value: p.id,
-                label: p.name,
-              }))}
-            />
-          </FieldWrap>
-        )}
-
-        {form.fields.map((f) => (
-          <FieldRenderer
-            key={f.id}
-            field={f}
-            value={values[f.label] ?? ""}
-            onChange={(v) => set(f.label, v)}
-            locked={f.is_document_field && !isPremium}
-          />
-        ))}
+      <div className="mt-6">
+        <StudentBlocks
+          fields={form.fields}
+          programs={form.programs}
+          isPremium={isPremium}
+          students={students}
+          setStudents={setStudents}
+          familyLabel={familyLabel}
+          setFamilyLabel={setFamilyLabel}
+        />
       </div>
 
       {error && (
@@ -139,7 +153,11 @@ export default function ApplyForm({
         disabled={submitting}
         className="mt-6 w-full rounded-lg bg-foreground py-3 text-sm font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
       >
-        {submitting ? "Submitting…" : "Submit application"}
+        {submitting
+          ? "Submitting…"
+          : students.length > 1
+            ? `Submit ${students.length} applications`
+            : "Submit application"}
       </button>
 
       <p className="mt-4 text-center text-[13px] text-muted">
@@ -152,191 +170,55 @@ export default function ApplyForm({
   );
 }
 
-function FieldWrap({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-[13.5px] font-medium text-muted-strong">
-        {label}
-        {required && <span className="ml-0.5 text-accent">*</span>}
-      </span>
-      {children}
-    </label>
-  );
-}
+function Confirmation({ created }: { created: Created[] }) {
+  const [copied, setCopied] = useState<string | null>(null);
+  const multi = created.length > 1;
 
-const INPUT =
-  "surface-2 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong";
-
-export function FieldRenderer({
-  field,
-  value,
-  onChange,
-  locked,
-}: {
-  field: PublicField;
-  value: string;
-  onChange: (v: string) => void;
-  locked: boolean;
-}) {
-  const { label, type, required, options } = field;
-
-  if (type === "file") {
-    return (
-      <FieldWrap label={label} required={false}>
-        <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-surface px-3 py-3 text-[13px] text-muted">
-          <Lock className="h-4 w-4" />
-          {locked ? "Document upload — available on Premium" : "File upload"}
-        </div>
-      </FieldWrap>
-    );
+  function copy(id: string) {
+    navigator.clipboard?.writeText(id);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 1500);
   }
 
-  if (type === "long_text") {
-    return (
-      <FieldWrap label={label} required={required}>
-        <textarea
-          required={required}
-          rows={3}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={INPUT}
-        />
-      </FieldWrap>
-    );
-  }
-
-  if (type === "dropdown") {
-    return (
-      <FieldWrap label={label} required={required}>
-        <Select
-          value={value}
-          onChange={onChange}
-          options={options.map((o) => ({ value: o, label: o }))}
-        />
-      </FieldWrap>
-    );
-  }
-
-  if (type === "date") {
-    return (
-      <FieldWrap label={label} required={required}>
-        <DatePicker value={value} onChange={onChange} />
-      </FieldWrap>
-    );
-  }
-
-  if (type === "radio") {
-    return (
-      <FieldWrap label={label} required={required}>
-        <div className="space-y-2">
-          {options.map((o) => (
-            <label key={o} className="flex items-center gap-2.5 text-[14px]">
-              <input
-                type="radio"
-                name={field.id}
-                required={required}
-                checked={value === o}
-                onChange={() => onChange(o)}
-                className="h-4 w-4 accent-[var(--accent)]"
-              />
-              {o}
-            </label>
-          ))}
-        </div>
-      </FieldWrap>
-    );
-  }
-
-  if (type === "checkbox") {
-    const selected = value ? value.split("|") : [];
-    const toggle = (o: string) => {
-      const next = selected.includes(o)
-        ? selected.filter((x) => x !== o)
-        : [...selected, o];
-      onChange(next.join("|"));
-    };
-    return (
-      <FieldWrap label={label} required={required}>
-        <div className="space-y-2">
-          {options.map((o) => (
-            <label key={o} className="flex items-center gap-2.5 text-[14px]">
-              <input
-                type="checkbox"
-                checked={selected.includes(o)}
-                onChange={() => toggle(o)}
-                className="h-4 w-4 rounded accent-[var(--accent)]"
-              />
-              {o}
-            </label>
-          ))}
-        </div>
-      </FieldWrap>
-    );
-  }
-
-  const htmlType =
-    type === "email"
-      ? "email"
-      : type === "phone"
-        ? "tel"
-        : type === "number"
-          ? "number"
-          : "text";
-
-  return (
-    <FieldWrap label={label} required={required}>
-      <input
-        type={htmlType}
-        required={required}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={INPUT}
-      />
-    </FieldWrap>
-  );
-}
-
-function Confirmation({ appId }: { appId: string }) {
-  const [copied, setCopied] = useState(false);
   return (
     <div className="card-sheen rounded-2xl p-8 text-center">
       <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-emerald-500/10 text-emerald-400">
         <CheckCircle2 className="h-6 w-6" strokeWidth={1.8} />
       </span>
-      <h1 className="mt-4 text-lg font-semibold">Application submitted</h1>
+      <h1 className="mt-4 text-lg font-semibold">
+        {multi ? `${created.length} applications submitted` : "Application submitted"}
+      </h1>
       <p className="mt-2 text-[13.5px] text-muted">
-        Save your Application ID — you&apos;ll need it to check your status.
-        There&apos;s no account, so please screenshot or write it down.
+        Save {multi ? "these Application IDs" : "your Application ID"} — you&apos;ll
+        need {multi ? "them" : "it"} to check status. There&apos;s no account, so
+        please screenshot or write {multi ? "them" : "it"} down.
       </p>
 
-      <div className="mt-5 flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-3">
-        <span className="font-mono text-lg font-semibold tracking-wide">
-          {appId}
-        </span>
-        <button
-          onClick={() => {
-            navigator.clipboard?.writeText(appId);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-          }}
-          aria-label="Copy Application ID"
-          className="rounded-md p-1.5 text-muted transition-colors hover:text-foreground"
-        >
-          <Copy className="h-4 w-4" />
-        </button>
+      <div className="mt-5 space-y-2">
+        {created.map((c) => (
+          <div
+            key={c.application_id}
+            className="flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-3"
+          >
+            <span className="font-mono text-lg font-semibold tracking-wide">
+              {c.application_id}
+            </span>
+            <button
+              onClick={() => copy(c.application_id)}
+              aria-label="Copy Application ID"
+              className="rounded-md p-1.5 text-muted transition-colors hover:text-foreground"
+            >
+              <Copy className="h-4 w-4" />
+            </button>
+            {copied === c.application_id && (
+              <span className="text-[12px] text-accent">Copied!</span>
+            )}
+          </div>
+        ))}
       </div>
-      {copied && <p className="mt-2 text-[12px] text-accent">Copied!</p>}
 
       <a
-        href={`/status?id=${encodeURIComponent(appId)}`}
+        href={`/status?id=${encodeURIComponent(created[0].application_id)}`}
         className="mt-6 inline-block text-[13px] font-medium text-accent hover:underline"
       >
         Track your application →

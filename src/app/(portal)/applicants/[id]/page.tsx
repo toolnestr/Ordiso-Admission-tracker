@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Mail, Phone, MessageCircle } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MessageCircle, Users2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
 import StatusControl from "./StatusControl";
@@ -39,12 +39,27 @@ export default async function ApplicantDetailPage({
   const { data: applicant } = await supabase
     .from("applicants")
     .select(
-      "id, application_id, form_data, email, phone, status, source, created_at, confirmed_at, confirmation_reason, fee_exempt, fee_exempt_reason, programs(name)",
+      "id, application_id, form_data, email, phone, status, source, created_at, confirmed_at, confirmation_reason, fee_exempt, fee_exempt_reason, family_id, family_label, programs(name)",
     )
     .eq("id", id)
     .maybeSingle();
 
   if (!applicant) notFound();
+
+  // Siblings: other applicants in the same family group (RLS scopes to this
+  // institute automatically). Only fetched when this applicant is in a family.
+  let siblings:
+    | { id: string; application_id: string; form_data: unknown; status: string }[]
+    | null = null;
+  if (applicant.family_id) {
+    const { data: sibs } = await supabase
+      .from("applicants")
+      .select("id, application_id, form_data, status")
+      .eq("family_id", applicant.family_id)
+      .neq("id", applicant.id)
+      .order("created_at", { ascending: true });
+    siblings = sibs ?? [];
+  }
 
   const [{ data: fees }, { data: notes }, { data: comms }, { data: activity }] =
     await Promise.all([
@@ -156,6 +171,44 @@ export default async function ApplicantDetailPage({
           )}
         </div>
       </div>
+
+      {/* Siblings / family group */}
+      {siblings && siblings.length > 0 && (
+        <div className="card-sheen mt-5 rounded-2xl p-5">
+          <div className="flex items-center gap-2">
+            <Users2 className="h-4 w-4 text-accent" strokeWidth={1.8} />
+            <h3 className="text-[14px] font-medium">
+              {applicant.family_label
+                ? `${applicant.family_label} — family`
+                : "Siblings"}
+            </h3>
+            <span className="text-[12px] text-muted">
+              {siblings.length + 1} students
+            </span>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {siblings.map((s) => (
+              <Link
+                key={s.id}
+                href={`/applicants/${s.id}`}
+                className="surface flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] transition-colors hover:border-border-strong"
+              >
+                <span className="font-medium">
+                  {displayName(
+                    (s.form_data ?? {}) as Record<string, unknown>,
+                    s.application_id,
+                  )}
+                </span>
+                <span
+                  className={`badge ${STATUS_STYLE[s.status] ?? "badge-neutral"}`}
+                >
+                  {s.status}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Status control */}
       <div className="mt-5">

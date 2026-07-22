@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Users, Share2 } from "lucide-react";
+import { Users, Share2, Users2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
 import NewEnquiry from "./NewEnquiry";
-import type { PublicField } from "@/app/apply/[instituteId]/ApplyForm";
+import type { PublicField } from "@/components/enquiry/fields";
 
 const STATUS_STYLE: Record<string, string> = {
   Applied: "badge-neutral",
@@ -43,11 +43,18 @@ export default async function ApplicantsPage() {
   const { data: applicants } = await supabase
     .from("applicants")
     .select(
-      "id, application_id, form_data, email, phone, status, source, created_at",
+      "id, application_id, form_data, email, phone, status, source, created_at, family_id, family_label",
     )
     .order("created_at", { ascending: false });
 
   const list = applicants ?? [];
+
+  // How many applicants share each family_id, so sibling rows can show a badge.
+  const familySize: Record<string, number> = {};
+  for (const a of list) {
+    const fid = (a as { family_id: string | null }).family_id;
+    if (fid) familySize[fid] = (familySize[fid] ?? 0) + 1;
+  }
 
   // Staff manual-entry: Admin/Counselor can add a walk-in enquiry when a
   // session is open. Fetch the institute's own form fields + programs (RLS
@@ -151,10 +158,27 @@ export default async function ApplicantsPage() {
                   >
                     <td className="px-4 py-3">
                       <Link href={`/applicants/${a.id}`} className="block">
-                        <div className="font-medium hover:text-accent">
-                          {displayName(
-                            a.form_data as Record<string, unknown>,
-                            a.email || a.phone || "Unknown",
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium hover:text-accent">
+                            {displayName(
+                              a.form_data as Record<string, unknown>,
+                              a.email || a.phone || "Unknown",
+                            )}
+                          </span>
+                          {a.family_id && familySize[a.family_id] > 1 && (
+                            <span
+                              className="badge badge-accent inline-flex items-center gap-1"
+                              title={
+                                a.family_label
+                                  ? `${a.family_label} — ${familySize[a.family_id]} students`
+                                  : `${familySize[a.family_id]} siblings`
+                              }
+                            >
+                              <Users2 className="h-3 w-3" strokeWidth={2} />
+                              {a.family_label
+                                ? `${a.family_label} ×${familySize[a.family_id]}`
+                                : `×${familySize[a.family_id]}`}
+                            </span>
                           )}
                         </div>
                         {a.email && (
