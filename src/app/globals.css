@@ -90,6 +90,19 @@
   border-color: var(--border);
 }
 
+/* Tailwind v4's Preflight no longer sets cursor:pointer on buttons, so every
+   <button> and role="button" showed the default arrow and felt non-clickable.
+   Restore the pointer; disabled controls keep the not-allowed cursor. */
+button:not(:disabled),
+[role="button"]:not(:disabled),
+label[for],
+summary {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
 html {
   scroll-behavior: smooth;
 }

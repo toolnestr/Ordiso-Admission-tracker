@@ -49,7 +49,7 @@ export default function Donut({
     <div className="flex flex-wrap items-center gap-5">
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
-          {/* track */}
+          {/* track (decorative — must not intercept segment hover) */}
           <circle
             cx={c}
             cy={c}
@@ -57,6 +57,7 @@ export default function Donut({
             fill="none"
             stroke={GRID_TRACK}
             strokeWidth={thickness}
+            style={{ pointerEvents: "none" }}
           />
           {arcs.map((a) => (
             <circle
@@ -69,9 +70,9 @@ export default function Donut({
               strokeWidth={hover === a.i ? thickness + 3 : thickness}
               strokeDasharray={`${a.dash} ${a.gap}`}
               strokeDashoffset={a.offset}
-              // 2px surface gap between adjacent segments
               style={{
                 transition: "stroke-width 0.15s",
+                cursor: "pointer",
                 filter:
                   hover !== null && hover !== a.i ? "opacity(0.45)" : "none",
               }}
@@ -79,7 +80,8 @@ export default function Donut({
               onMouseLeave={() => setHover(null)}
             />
           ))}
-          {/* surface gaps: thin surface-colored ticks at each boundary */}
+          {/* surface gaps: thin surface-colored ticks at each boundary.
+              pointer-events off so they don't break hover along boundaries. */}
           {arcs.map((a) => {
             const angle = (a.offset / circ) * -360;
             return (
@@ -92,11 +94,14 @@ export default function Donut({
                 stroke={SURFACE}
                 strokeWidth={2}
                 transform={`rotate(${angle} ${c} ${c})`}
+                style={{ pointerEvents: "none" }}
               />
             );
           })}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
+        {/* Center label sits over the whole donut box; without pointer-events
+            off it would swallow every hover and the ring would never respond. */}
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-2xl font-semibold">
             {hover !== null ? data[hover].value : total}
           </span>
@@ -106,7 +111,7 @@ export default function Donut({
         </div>
       </div>
 
-      <ul className="min-w-0 flex-1 space-y-1.5">
+      <ul className="w-full flex-1 space-y-1.5 sm:w-auto sm:min-w-[150px]">
         {data.map((d, i) => {
           const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
           return (
@@ -114,14 +119,14 @@ export default function Donut({
               key={d.label}
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover(null)}
-              className="flex items-center gap-2.5 text-[13px]"
+              className="flex cursor-pointer items-center gap-2.5 text-[13px]"
             >
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-sm"
                 style={{ background: d.color }}
                 aria-hidden
               />
-              <span className="flex-1 truncate text-muted-strong">
+              <span className="flex-1 whitespace-nowrap text-muted-strong">
                 {d.label}
               </span>
               <span className="tabular-nums text-muted">{d.value}</span>

@@ -6,6 +6,7 @@ import Funnel from "@/components/charts/Funnel";
 import Donut from "@/components/charts/Donut";
 import AreaChart from "@/components/charts/AreaChart";
 import { stageColor, sourceColor } from "@/components/charts/palette";
+import ScreenshotButton from "@/components/portal/ScreenshotButton";
 
 type Row = { status: string; source: string; created_at: string };
 
@@ -137,8 +138,15 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <Header name={ctx.name} sessionName={ctx.session.name} />
+      <div className="flex items-start justify-between gap-3">
+        <Header name={ctx.name} sessionName={ctx.session.name} />
+        <ScreenshotButton
+          targetId="dashboard-capture"
+          filePrefix="ordiso-dashboard"
+        />
+      </div>
 
+      <div id="dashboard-capture">
       {/* KPI row with trends vs previous session */}
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Total applicants" value={cur.total} prior={prev?.total} />
@@ -255,6 +263,7 @@ export default async function DashboardPage() {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

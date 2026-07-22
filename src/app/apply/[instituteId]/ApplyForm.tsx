@@ -141,6 +141,13 @@ export default function ApplyForm({
       >
         {submitting ? "Submitting…" : "Submit application"}
       </button>
+
+      <p className="mt-4 text-center text-[13px] text-muted">
+        Already applied?{" "}
+        <a href="/status" className="font-medium text-accent hover:underline">
+          Track your application
+        </a>
+      </p>
     </form>
   );
 }

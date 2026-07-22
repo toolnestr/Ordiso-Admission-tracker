@@ -8,6 +8,7 @@ import Donut from "@/components/charts/Donut";
 import Funnel from "@/components/charts/Funnel";
 import AreaChart from "@/components/charts/AreaChart";
 import { stageColor, sourceColor } from "@/components/charts/palette";
+import ScreenshotButton from "@/components/portal/ScreenshotButton";
 import type { SessionMeta, Totals } from "./page";
 
 function fmtDay(iso: string) {
@@ -125,15 +126,19 @@ export default function ReportsView({
           ))}
         </div>
 
-        <button
-          onClick={exportCsv}
-          className="surface-2 ml-auto inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors hover:bg-[var(--border)]"
-        >
-          <Download className="h-4 w-4" strokeWidth={1.8} />
-          Export CSV
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <ScreenshotButton targetId="reports-capture" filePrefix="ordiso-report" />
+          <button
+            onClick={exportCsv}
+            className="surface-2 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors hover:bg-[var(--border)]"
+          >
+            <Download className="h-4 w-4" strokeWidth={1.8} />
+            Export CSV
+          </button>
+        </div>
       </div>
 
+      <div id="reports-capture">
       {/* KPI row */}
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Total applicants" value={current.total} prior={prior?.total} />
@@ -226,6 +231,7 @@ export default function ReportsView({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
