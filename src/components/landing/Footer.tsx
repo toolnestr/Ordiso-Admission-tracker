@@ -8,9 +8,14 @@ export default function Footer() {
           <Logo />
           <span className="text-[14px] font-semibold">Ordiso</span>
         </div>
-        <p className="text-[13px] text-muted">
-          Free admission management for institutes.
-        </p>
+        <div className="flex items-center gap-5 text-[13px] text-muted">
+          <a href="/status" className="transition-colors hover:text-foreground">
+            Track application
+          </a>
+          <a href="/login" className="transition-colors hover:text-foreground">
+            Institute login
+          </a>
+        </div>
         <p className="text-xs text-muted">
           © {new Date().getFullYear()} Ordiso. All rights reserved.
         </p>

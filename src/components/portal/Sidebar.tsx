@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -12,6 +13,7 @@ import {
   BarChart3,
   Settings,
   Sparkles,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/landing/Nav";
@@ -44,6 +46,18 @@ const nav: NavItem[] = [
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["Admin"] },
 ];
+
+// Rendered inside each nav <Link>. useLinkStatus reports the transition's
+// pending state, so a spinner appears the moment a link is clicked and stays
+// until the destination's data is ready — the immediate "yes, it registered"
+// feedback the slow server-component navigations were missing.
+function NavPending() {
+  const { pending } = useLinkStatus();
+  if (!pending) return null;
+  return (
+    <Loader2 className="ml-auto h-3.5 w-3.5 animate-spin text-accent" />
+  );
+}
 
 export default function Sidebar({ role }: { role: StaffRole }) {
   const pathname = usePathname();
@@ -78,6 +92,7 @@ export default function Sidebar({ role }: { role: StaffRole }) {
                   strokeWidth={1.7}
                 />
                 {item.label}
+                <NavPending />
               </Link>
             );
           })}

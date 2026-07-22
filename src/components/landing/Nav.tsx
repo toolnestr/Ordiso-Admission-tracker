@@ -49,6 +49,12 @@ export default function Nav() {
 
         <div className="flex items-center gap-2">
           <a
+            href="/status"
+            className="rounded-lg px-3.5 py-2 text-[13px] font-medium text-muted-strong transition-colors hover:text-foreground"
+          >
+            Track application
+          </a>
+          <a
             href="/login"
             className="hidden rounded-lg px-3.5 py-2 text-[13px] font-medium text-muted-strong transition-colors hover:text-foreground sm:block"
           >

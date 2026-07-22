@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/landing/Nav";
@@ -26,6 +26,14 @@ export default function StatusPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<StatusResult | null>(null);
+
+  // Pre-fill the Application ID when arriving from the post-apply screen
+  // (/status?id=ORD-XXXXXX). Read from the URL in an effect rather than
+  // useSearchParams so the page stays statically prerendered.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (id) setAppId(id);
+  }, []);
 
   async function lookup(e: React.FormEvent) {
     e.preventDefault();

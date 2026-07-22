@@ -329,10 +329,10 @@ function Confirmation({ appId }: { appId: string }) {
       {copied && <p className="mt-2 text-[12px] text-accent">Copied!</p>}
 
       <a
-        href="/status"
+        href={`/status?id=${encodeURIComponent(appId)}`}
         className="mt-6 inline-block text-[13px] font-medium text-accent hover:underline"
       >
-        Check application status →
+        Track your application →
       </a>
     </div>
   );
