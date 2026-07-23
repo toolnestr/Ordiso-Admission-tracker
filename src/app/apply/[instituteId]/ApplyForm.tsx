@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AlertCircle, CheckCircle2, Copy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { deriveContact } from "@/components/enquiry/fields";
-import { sendReceivedEmails } from "./actions";
+import { sendReceivedEmails, uploadApplicantDocument } from "./actions";
 import StudentBlocks, {
   newStudent,
   toGroupPayload,
@@ -50,11 +50,33 @@ export default function ApplyForm({
   const [students, setStudents] = useState<Student[]>([newStudent()]);
   const [shared, setShared] = useState<Record<string, string>>({});
   const [familyLabel, setFamilyLabel] = useState("");
+  const [files, setFiles] = useState<
+    Record<string, Record<string, File | undefined>>
+  >({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
 
   const isPremium = form.institute.plan === "Premium";
+
+  function setFile(key: string, label: string, file: File | undefined) {
+    setFiles((prev) => ({ ...prev, [key]: { ...prev[key], [label]: file } }));
+  }
+
+  // Upload each student's attached files to their created applicant. Best-effort.
+  async function uploadFiles(pairs: { key: string; appId: string }[]) {
+    for (const { key, appId } of pairs) {
+      const perField = files[key];
+      if (!perField) continue;
+      for (const [label, file] of Object.entries(perField)) {
+        if (!file) continue;
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("label", label);
+        await uploadApplicantDocument(appId, fd);
+      }
+    }
+  }
 
   function friendlyError(code?: string) {
     if (code === "session_full")
@@ -106,6 +128,7 @@ export default function ApplyForm({
         ],
       });
       void sendReceivedEmails([res.application_id]);
+      void uploadFiles([{ key: students[0].key, appId: res.application_id }]);
       return;
     }
 
@@ -126,6 +149,12 @@ export default function ApplyForm({
     }
     setResult({ students: res.students, familyCode: res.family_code });
     void sendReceivedEmails(res.students.map((s) => s.application_id));
+    void uploadFiles(
+      students.map((s, i) => ({
+        key: s.key,
+        appId: res.students![i].application_id,
+      })),
+    );
   }
 
   if (result) {
@@ -152,6 +181,8 @@ export default function ApplyForm({
           setShared={setShared}
           familyLabel={familyLabel}
           setFamilyLabel={setFamilyLabel}
+          files={files}
+          setFile={setFile}
         />
       </div>
 

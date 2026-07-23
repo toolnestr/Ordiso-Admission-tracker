@@ -53,6 +53,8 @@ export default function StudentBlocks({
   setShared,
   familyLabel,
   setFamilyLabel,
+  files,
+  setFile,
 }: {
   fields: PublicField[];
   programs: { id: string; name: string }[];
@@ -63,10 +65,45 @@ export default function StudentBlocks({
   setShared: (next: Record<string, string>) => void;
   familyLabel: string;
   setFamilyLabel: (v: string) => void;
+  /** When provided (public form) + Premium, file fields become real uploads. */
+  files?: Record<string, Record<string, File | undefined>>;
+  setFile?: (studentKey: string, label: string, file: File | undefined) => void;
 }) {
   const multi = students.length > 1;
   const sharedFields = fields.filter(isSharedField);
   const childFields = fields.filter((f) => !isSharedField(f));
+  const fileUpload = !!setFile && isPremium;
+
+  function renderChildField(s: Student, f: PublicField) {
+    if (fileUpload && f.type === "file") {
+      const current = files?.[s.key]?.[f.label];
+      return (
+        <label key={f.id} className="block">
+          <span className="mb-1.5 block text-[13.5px] font-medium text-muted-strong">
+            {f.label}
+          </span>
+          <input
+            type="file"
+            accept=".pdf,image/png,image/jpeg,image/webp"
+            onChange={(e) => setFile!(s.key, f.label, e.target.files?.[0])}
+            className="block w-full text-[13px] text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-[var(--border)]"
+          />
+          <span className="mt-1 block text-[12px] text-muted">
+            PDF or image, max 5 MB.{current ? ` Selected: ${current.name}` : ""}
+          </span>
+        </label>
+      );
+    }
+    return (
+      <FieldRenderer
+        key={f.id}
+        field={f}
+        value={s.values[f.label] ?? ""}
+        onChange={(v) => setValue(s.key, f.label, v)}
+        locked={f.is_document_field && !isPremium}
+      />
+    );
+  }
 
   function update(key: string, patch: Partial<Student>) {
     setStudents(students.map((s) => (s.key === key ? { ...s, ...patch } : s)));
@@ -117,15 +154,7 @@ export default function StudentBlocks({
       <div className="space-y-5">
         {programSelect(s)}
         {sharedBlock}
-        {childFields.map((f) => (
-          <FieldRenderer
-            key={f.id}
-            field={f}
-            value={s.values[f.label] ?? ""}
-            onChange={(v) => setValue(s.key, f.label, v)}
-            locked={f.is_document_field && !isPremium}
-          />
-        ))}
+        {childFields.map((f) => renderChildField(s, f))}
         <AddButton onClick={addStudent} />
       </div>
     );
@@ -175,15 +204,7 @@ export default function StudentBlocks({
           </div>
           <div className="space-y-5">
             {programSelect(s)}
-            {childFields.map((f) => (
-              <FieldRenderer
-                key={f.id}
-                field={f}
-                value={s.values[f.label] ?? ""}
-                onChange={(v) => setValue(s.key, f.label, v)}
-                locked={f.is_document_field && !isPremium}
-              />
-            ))}
+            {childFields.map((f) => renderChildField(s, f))}
           </div>
         </div>
       ))}
