@@ -1,12 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
 import { logActivity } from "@/lib/activity";
 import { sendApplicantEmail, statusEmailKind } from "@/lib/email";
 
 export type ActionState = { error: string | null };
+
+/** Documents cap: a single file must be 5 MB or smaller (also set on the bucket). */
+export const MAX_DOC_BYTES = 5 * 1024 * 1024;
 
 const PIPELINE = [
   "Applied",
@@ -440,6 +443,91 @@ export async function manualConfirm(
 
   refresh(applicantId);
   return { error: null };
+}
+
+/**
+ * Staff document upload (Premium only). File goes to the private `documents`
+ * bucket via the service role (storage RLS is bypassed; the row insert is
+ * still RLS-checked as the signed-in user). 5 MB cap enforced here and on the
+ * bucket.
+ */
+export async function uploadDocument(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const ctx = await getPortalContext();
+  if (ctx.role === "Viewer") return { error: "You don't have permission." };
+  if (ctx.institute.plan !== "Premium") {
+    return { error: "Document uploads are a Premium feature." };
+  }
+
+  const applicantId = String(formData.get("applicant_id") || "");
+  const label = String(formData.get("label") || "").trim();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Choose a file to upload." };
+  }
+  if (file.size > MAX_DOC_BYTES) {
+    return { error: "File must be 5 MB or smaller." };
+  }
+
+  const svc = createServiceClient();
+  const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+  const path = `${ctx.institute.id}/${applicantId}/${crypto.randomUUID()}.${ext}`;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+
+  const { error: upErr } = await svc.storage
+    .from("documents")
+    .upload(path, bytes, { contentType: file.type, upsert: false });
+  if (upErr) return { error: "Upload failed. Check the file type and size." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("documents").insert({
+    applicant_id: applicantId,
+    document_label: label || file.name,
+    file_url: path,
+    file_size: file.size,
+  });
+  if (error) {
+    await svc.storage.from("documents").remove([path]);
+    return { error: "Could not save the document." };
+  }
+
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId,
+    staffId: ctx.staffId,
+    actionType: "document_uploaded",
+    description: `Document uploaded: ${label || file.name}`,
+  });
+  refresh(applicantId);
+  return { error: null };
+}
+
+export async function deleteDocument(docId: string, applicantId: string) {
+  const ctx = await getPortalContext();
+  if (ctx.role === "Viewer") return;
+
+  const supabase = await createClient();
+  const { data: doc } = await supabase
+    .from("documents")
+    .select("file_url, document_label")
+    .eq("id", docId)
+    .single();
+  if (!doc) return;
+
+  const svc = createServiceClient();
+  await svc.storage.from("documents").remove([doc.file_url]);
+  await supabase.from("documents").delete().eq("id", docId);
+
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId,
+    staffId: ctx.staffId,
+    actionType: "document_deleted",
+    description: `Document deleted: ${doc.document_label ?? "file"}`,
+  });
+  refresh(applicantId);
 }
 
 export async function addNote(

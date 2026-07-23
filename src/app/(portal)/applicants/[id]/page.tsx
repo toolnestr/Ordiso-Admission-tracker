@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Phone, MessageCircle, Users2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
 import StatusControl from "./StatusControl";
 import DetailTabs from "./DetailTabs";
@@ -113,6 +113,35 @@ export default async function ApplicantDetailPage({
         .eq("applicant_id", id)
         .order("created_at", { ascending: false }),
     ]);
+
+  // Documents (Premium): fetch rows, then mint short-lived signed URLs from the
+  // private bucket via the service role so the tab can link/download them.
+  const { data: docRows } = await supabase
+    .from("documents")
+    .select("id, document_label, file_url, file_size, uploaded_at")
+    .eq("applicant_id", id)
+    .order("uploaded_at", { ascending: false });
+  let documents: {
+    id: string;
+    label: string;
+    size: number;
+    url: string | null;
+  }[] = [];
+  if (docRows && docRows.length > 0) {
+    const svc = createServiceClient();
+    const { data: signed } = await svc.storage
+      .from("documents")
+      .createSignedUrls(
+        docRows.map((d) => d.file_url as string),
+        3600,
+      );
+    documents = docRows.map((d, i) => ({
+      id: d.id as string,
+      label: (d.document_label as string) || "Document",
+      size: Number(d.file_size ?? 0),
+      url: signed?.[i]?.signedUrl ?? null,
+    }));
+  }
 
   const form_data = (applicant.form_data ?? {}) as Record<string, unknown>;
   const name = displayName(form_data, applicant.email || "Unknown");
@@ -266,6 +295,7 @@ export default async function ApplicantDetailPage({
           formData={form_data}
           fees={(fees ?? []) as never[]}
           familyFees={(familyFees ?? []) as never[]}
+          documents={documents}
           notes={(notes ?? []) as never[]}
           comms={(comms ?? []) as never[]}
           activity={(activity ?? []) as never[]}

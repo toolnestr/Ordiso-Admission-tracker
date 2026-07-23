@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import {
   AlertCircle,
   Lock,
@@ -9,6 +9,9 @@ import {
   Wallet,
   History,
   Pencil,
+  FileUp,
+  FileText,
+  Download,
 } from "lucide-react";
 import {
   addFee,
@@ -17,6 +20,8 @@ import {
   editPayment,
   deletePayment,
   waiveFee,
+  uploadDocument,
+  deleteDocument,
   addNote,
   deleteNote,
   addCommunication,
@@ -86,6 +91,7 @@ function when(iso: string) {
 }
 
 type FamilyMemberFees = { id: string; name: string; fees: Fee[] };
+type Doc = { id: string; label: string; size: number; url: string | null };
 
 export default function DetailTabs(props: {
   applicantId: string;
@@ -95,6 +101,7 @@ export default function DetailTabs(props: {
   formData: Record<string, unknown>;
   fees: Fee[];
   familyFees: FamilyMemberFees[];
+  documents: Doc[];
   notes: Note[];
   comms: Comm[];
   activity: Activity[];
@@ -130,7 +137,14 @@ export default function DetailTabs(props: {
         {tab === "Fees" && <FeesTab {...props} />}
         {tab === "Notes" && <NotesTab {...props} />}
         {tab === "Status" && <StatusTab {...props} />}
-        {tab === "Documents" && <DocumentsTab isPremium={props.isPremium} />}
+        {tab === "Documents" && (
+          <DocumentsTab
+            isPremium={props.isPremium}
+            documents={props.documents}
+            applicantId={props.applicantId}
+            role={props.role}
+          />
+        )}
         {tab === "Activity" && <ActivityTab activity={props.activity} />}
       </div>
     </div>
@@ -766,7 +780,28 @@ function StatusTab({
   );
 }
 
-function DocumentsTab({ isPremium }: { isPremium: boolean }) {
+function fmtSize(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
+
+function DocumentsTab({
+  isPremium,
+  documents,
+  applicantId,
+  role,
+}: {
+  isPremium: boolean;
+  documents: Doc[];
+  applicantId: string;
+  role: StaffRole;
+}) {
+  const [state, action, pending] = useActionState(uploadDocument, initial);
+  const [deleting, startDelete] = useTransition();
+  const canEdit = role !== "Viewer";
+  const formRef = useRef<HTMLFormElement>(null);
+
   if (!isPremium) {
     return (
       <div className="card-sheen flex flex-col items-center rounded-2xl px-6 py-14 text-center">
@@ -783,7 +818,111 @@ function DocumentsTab({ isPremium }: { isPremium: boolean }) {
       </div>
     );
   }
-  return <Empty text="No documents uploaded." />;
+
+  return (
+    <div className="space-y-4">
+      {documents.length === 0 ? (
+        <Empty text="No documents uploaded yet." />
+      ) : (
+        <div className="space-y-2">
+          {documents.map((d) => (
+            <div
+              key={d.id}
+              className="surface flex items-center justify-between gap-3 rounded-xl px-4 py-3"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <FileText
+                  className="h-5 w-5 shrink-0 text-accent"
+                  strokeWidth={1.6}
+                />
+                <div className="min-w-0">
+                  <div className="truncate text-[13.5px] font-medium">
+                    {d.label}
+                  </div>
+                  <div className="text-[12px] text-muted">
+                    {fmtSize(d.size)}
+                  </div>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                {d.url && (
+                  <a
+                    href={d.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Download"
+                    className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                  >
+                    <Download className="h-4 w-4" strokeWidth={1.8} />
+                  </a>
+                )}
+                {canEdit && (
+                  <button
+                    onClick={() =>
+                      startDelete(() => deleteDocument(d.id, applicantId))
+                    }
+                    disabled={deleting}
+                    aria-label="Delete"
+                    className="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" strokeWidth={1.8} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {canEdit && (
+        <form
+          ref={formRef}
+          action={action}
+          onSubmit={() => setTimeout(() => formRef.current?.reset(), 100)}
+          className="card-sheen rounded-xl p-4"
+        >
+          <input type="hidden" name="applicant_id" value={applicantId} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[13px] font-medium text-muted-strong">
+                Label (optional)
+              </span>
+              <input
+                name="label"
+                placeholder="e.g. Transcript, National ID"
+                className="surface-2 mt-1.5 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[13px] font-medium text-muted-strong">
+                File (PDF/image, max 5 MB)
+              </span>
+              <input
+                name="file"
+                type="file"
+                required
+                accept=".pdf,image/png,image/jpeg,image/webp"
+                className="mt-1.5 block w-full text-[13px] text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-surface-2 file:px-3 file:py-2 file:text-[13px] file:font-medium file:text-foreground hover:file:bg-[var(--border)]"
+              />
+            </label>
+          </div>
+          {state.error && (
+            <div className="mt-3">
+              <ErrorNote text={state.error} />
+            </div>
+          )}
+          <button
+            type="submit"
+            disabled={pending}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-foreground px-4 py-2 text-[13px] font-medium text-background disabled:opacity-50"
+          >
+            <FileUp className="h-4 w-4" strokeWidth={1.8} />
+            {pending ? "Uploading…" : "Upload document"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
 }
 
 function ActivityTab({ activity }: { activity: Activity[] }) {
