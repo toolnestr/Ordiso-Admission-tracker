@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, Sparkles } from "lucide-react";
@@ -15,7 +16,10 @@ import type { StaffRole } from "@/lib/portal";
  */
 export default function MobileNav({ role }: { role: StaffRole }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => setMounted(true), []);
 
   // Close the drawer whenever the route changes.
   useEffect(() => {
@@ -44,13 +48,18 @@ export default function MobileNav({ role }: { role: StaffRole }) {
         <Menu className="h-4 w-4" strokeWidth={1.8} />
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-background px-3 py-4">
+      {/* Portalled to <body> so the Topbar's backdrop-blur (which would
+          otherwise become the containing block for this fixed overlay and trap
+          it inside the header) can't confine or show through it. */}
+      {open &&
+        mounted &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] md:hidden">
+            <div
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+              onClick={() => setOpen(false)}
+            />
+            <div className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-[#0b0b10] px-3 py-4 shadow-2xl">
             <div className="mb-6 flex items-center justify-between px-2">
               <Link href="/dashboard" className="flex items-center gap-2.5">
                 <Logo />
@@ -100,8 +109,9 @@ export default function MobileNav({ role }: { role: StaffRole }) {
               Upgrade
             </Link>
           </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

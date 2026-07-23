@@ -47,12 +47,12 @@ export default function Nav() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <a
             href="/status"
-            className="rounded-lg px-3.5 py-2 text-[13px] font-medium text-muted-strong transition-colors hover:text-foreground"
+            className="whitespace-nowrap rounded-lg px-2.5 py-2 text-[13px] font-medium text-muted-strong transition-colors hover:text-foreground sm:px-3.5"
           >
-            Track application
+            Track<span className="hidden sm:inline"> application</span>
           </a>
           <a
             href="/login"
@@ -62,9 +62,9 @@ export default function Nav() {
           </a>
           <a
             href="/register"
-            className="rounded-lg bg-foreground px-3.5 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90"
+            className="whitespace-nowrap rounded-lg bg-foreground px-2.5 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90 sm:px-3.5"
           >
-            Register your institute
+            Register<span className="hidden sm:inline"> your institute</span>
           </a>
         </div>
       </nav>
