@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Mail, Phone, MessageCircle, Users2 } from "lucide-react";
+import { ArrowLeft, Phone, MessageCircle, Users2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
 import StatusControl from "./StatusControl";
 import DetailTabs from "./DetailTabs";
+import EmailButton from "./EmailButton";
 
 const STATUS_STYLE: Record<string, string> = {
   Applied: "badge-neutral",
@@ -59,6 +60,33 @@ export default async function ApplicantDetailPage({
       .neq("id", applicant.id)
       .order("created_at", { ascending: true });
     siblings = sibs ?? [];
+  }
+
+  // Family fees: every sibling's fees, so payments can be collected for the
+  // whole family from one place (the Fees tab).
+  let familyFees:
+    | { id: string; name: string; fees: unknown[] }[]
+    | null = null;
+  if (siblings && siblings.length > 0) {
+    const ids = siblings.map((s) => s.id);
+    const { data: sibFees } = await supabase
+      .from("applicant_fees")
+      .select(
+        "id, name, amount, status, amount_paid, remaining_balance, applicant_id, fee_payment_history(id, amount, paid_on, staff(name))",
+      )
+      .in("applicant_id", ids);
+    familyFees = siblings
+      .map((s) => ({
+        id: s.id,
+        name: displayName(
+          (s.form_data ?? {}) as Record<string, unknown>,
+          s.application_id,
+        ),
+        fees: (sibFees ?? []).filter(
+          (f) => (f as { applicant_id: string }).applicant_id === s.id,
+        ),
+      }))
+      .filter((s) => s.fees.length > 0);
   }
 
   const [{ data: fees }, { data: notes }, { data: comms }, { data: activity }] =
@@ -160,15 +188,7 @@ export default async function ApplicantDetailPage({
               </a>
             </>
           )}
-          {applicant.email && (
-            <a
-              href={`mailto:${applicant.email}`}
-              aria-label="Email"
-              className="surface-2 grid h-9 w-9 place-items-center rounded-lg text-muted-strong transition-colors hover:text-foreground"
-            >
-              <Mail className="h-4 w-4" strokeWidth={1.7} />
-            </a>
-          )}
+          {applicant.email && <EmailButton email={applicant.email} />}
         </div>
       </div>
 
@@ -230,6 +250,7 @@ export default async function ApplicantDetailPage({
           isPremium={ctx.institute.plan === "Premium"}
           formData={form_data}
           fees={(fees ?? []) as never[]}
+          familyFees={(familyFees ?? []) as never[]}
           notes={(notes ?? []) as never[]}
           comms={(comms ?? []) as never[]}
           activity={(activity ?? []) as never[]}

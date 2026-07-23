@@ -7,6 +7,7 @@ import { deriveContact } from "@/components/enquiry/fields";
 import StudentBlocks, {
   newStudent,
   toGroupPayload,
+  mergedValues,
   type Student,
 } from "@/components/enquiry/StudentBlocks";
 
@@ -36,6 +37,7 @@ export type PublicForm = {
 };
 
 type Created = { application_id: string; possible_duplicate: boolean };
+type Result = { students: Created[]; familyCode?: string };
 
 export default function ApplyForm({
   form,
@@ -45,10 +47,11 @@ export default function ApplyForm({
   instituteId: string;
 }) {
   const [students, setStudents] = useState<Student[]>([newStudent()]);
+  const [shared, setShared] = useState<Record<string, string>>({});
   const [familyLabel, setFamilyLabel] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<Created[] | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
 
   const isPremium = form.institute.plan === "Premium";
 
@@ -73,14 +76,14 @@ export default function ApplyForm({
     const supabase = createClient();
 
     if (students.length === 1) {
-      const s = students[0];
-      const { email, phone } = deriveContact(form.fields, s.values);
+      const values = mergedValues(students[0], shared);
+      const { email, phone } = deriveContact(form.fields, values);
       const { data, error: rpcErr } = await supabase.rpc("submit_application", {
         p_institute_id: instituteId,
-        p_form_data: s.values,
+        p_form_data: values,
         p_email: email,
         p_phone: phone,
-        p_program_id: s.programId || null,
+        p_program_id: students[0].programId || null,
         p_source: "Direct",
       });
       setSubmitting(false);
@@ -93,31 +96,37 @@ export default function ApplyForm({
         setError(friendlyError(res?.error));
         return;
       }
-      setResult([
-        {
-          application_id: res.application_id,
-          possible_duplicate: !!res.possible_duplicate,
-        },
-      ]);
+      setResult({
+        students: [
+          {
+            application_id: res.application_id,
+            possible_duplicate: !!res.possible_duplicate,
+          },
+        ],
+      });
       return;
     }
 
     const { data, error: rpcErr } = await supabase.rpc("submit_enquiry_group", {
       p_institute_id: instituteId,
       p_family_label: familyLabel,
-      p_students: toGroupPayload(students, form.fields),
+      p_students: toGroupPayload(students, form.fields, shared),
     });
     setSubmitting(false);
-    const res = data as { students?: Created[]; error?: string };
+    const res = data as {
+      students?: Created[];
+      family_code?: string;
+      error?: string;
+    };
     if (rpcErr || !res?.students) {
       setError(friendlyError(res?.error));
       return;
     }
-    setResult(res.students);
+    setResult({ students: res.students, familyCode: res.family_code });
   }
 
   if (result) {
-    return <Confirmation created={result} />;
+    return <Confirmation result={result} />;
   }
 
   return (
@@ -136,6 +145,8 @@ export default function ApplyForm({
           isPremium={isPremium}
           students={students}
           setStudents={setStudents}
+          shared={shared}
+          setShared={setShared}
           familyLabel={familyLabel}
           setFamilyLabel={setFamilyLabel}
         />
@@ -170,8 +181,9 @@ export default function ApplyForm({
   );
 }
 
-function Confirmation({ created }: { created: Created[] }) {
+function Confirmation({ result }: { result: Result }) {
   const [copied, setCopied] = useState<string | null>(null);
+  const created = result.students;
   const multi = created.length > 1;
 
   function copy(id: string) {
@@ -193,6 +205,17 @@ function Confirmation({ created }: { created: Created[] }) {
         need {multi ? "them" : "it"} to check status. There&apos;s no account, so
         please screenshot or write {multi ? "them" : "it"} down.
       </p>
+
+      {result.familyCode && (
+        <div className="mt-5 rounded-lg border border-accent-soft bg-accent-soft px-4 py-3">
+          <p className="text-[12.5px] text-muted-strong">
+            Family tracking code — track all your children with one code
+          </p>
+          <p className="mt-1 font-mono text-lg font-semibold tracking-wide text-accent">
+            {result.familyCode}
+          </p>
+        </div>
+      )}
 
       <div className="mt-5 space-y-2">
         {created.map((c) => (

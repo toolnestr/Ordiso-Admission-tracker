@@ -194,6 +194,161 @@ export async function recordPayment(
   return { error: null };
 }
 
+/**
+ * Recompute a fee's paid/remaining/status from its payment history — the
+ * single source of truth after any edit or deletion of a payment. Never
+ * touches a Waived fee.
+ */
+async function recomputeFee(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  feeId: string,
+) {
+  const { data: fee } = await supabase
+    .from("applicant_fees")
+    .select("amount, status")
+    .eq("id", feeId)
+    .single();
+  if (!fee || fee.status === "Waived") return;
+
+  const { data: hist } = await supabase
+    .from("fee_payment_history")
+    .select("amount")
+    .eq("applicant_fee_id", feeId);
+
+  const paid = (hist ?? []).reduce((s, h) => s + Number(h.amount), 0);
+  const remaining = Number(fee.amount) - paid;
+  const status = remaining <= 0 ? "Paid" : paid > 0 ? "Partially Paid" : "Pending";
+
+  await supabase
+    .from("applicant_fees")
+    .update({
+      amount_paid: paid,
+      remaining_balance: Math.max(remaining, 0),
+      status,
+    })
+    .eq("id", feeId);
+}
+
+/** Edit a fee's name/amount after it was assigned (e.g. corrected sum). */
+export async function editFeeAmount(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const ctx = await getPortalContext();
+  if (ctx.role === "Viewer") return { error: "You don't have permission." };
+
+  const feeId = String(formData.get("fee_id") || "");
+  const applicantId = String(formData.get("applicant_id") || "");
+  const name = String(formData.get("name") || "").trim();
+  const amount = Number(formData.get("amount") || 0);
+  if (!name) return { error: "Give the fee a name." };
+  if (!(amount > 0)) return { error: "Enter an amount greater than zero." };
+
+  const supabase = await createClient();
+  const { data: fee } = await supabase
+    .from("applicant_fees")
+    .select("amount_paid, status")
+    .eq("id", feeId)
+    .single();
+  if (!fee) return { error: "Fee not found." };
+  if (fee.status === "Waived") return { error: "This fee is waived." };
+  if (amount < Number(fee.amount_paid)) {
+    return { error: "Amount can't be less than what's already paid." };
+  }
+
+  const { error } = await supabase
+    .from("applicant_fees")
+    .update({ name, amount })
+    .eq("id", feeId);
+  if (error) return { error: "Could not update the fee." };
+
+  await recomputeFee(supabase, feeId);
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId,
+    staffId: ctx.staffId,
+    actionType: "fee_edited",
+    description: `Fee updated: ${name} (${ctx.institute.currency}${amount})`,
+  });
+  await maybeAutoConfirm(applicantId, ctx.institute.id);
+  refresh(applicantId);
+  return { error: null };
+}
+
+/** Correct the amount of an already-recorded payment. */
+export async function editPayment(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const ctx = await getPortalContext();
+  if (ctx.role === "Viewer") return { error: "You don't have permission." };
+
+  const paymentId = String(formData.get("payment_id") || "");
+  const feeId = String(formData.get("fee_id") || "");
+  const applicantId = String(formData.get("applicant_id") || "");
+  const amount = Number(formData.get("amount") || 0);
+  if (!(amount > 0)) return { error: "Enter an amount greater than zero." };
+
+  const supabase = await createClient();
+  const { data: fee } = await supabase
+    .from("applicant_fees")
+    .select("amount, amount_paid")
+    .eq("id", feeId)
+    .single();
+  if (!fee) return { error: "Fee not found." };
+
+  // The other payments plus the new amount must not exceed the fee total.
+  const { data: other } = await supabase
+    .from("fee_payment_history")
+    .select("amount")
+    .eq("applicant_fee_id", feeId)
+    .neq("id", paymentId);
+  const otherSum = (other ?? []).reduce((s, h) => s + Number(h.amount), 0);
+  if (otherSum + amount > Number(fee.amount)) {
+    return { error: "That's more than the fee total." };
+  }
+
+  const { error } = await supabase
+    .from("fee_payment_history")
+    .update({ amount })
+    .eq("id", paymentId);
+  if (error) return { error: "Could not update the payment." };
+
+  await recomputeFee(supabase, feeId);
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId,
+    staffId: ctx.staffId,
+    actionType: "fee_payment_edited",
+    description: `Payment corrected to ${ctx.institute.currency}${amount}`,
+  });
+  await maybeAutoConfirm(applicantId, ctx.institute.id);
+  refresh(applicantId);
+  return { error: null };
+}
+
+/** Delete a recorded payment (entered in error). */
+export async function deletePayment(
+  paymentId: string,
+  feeId: string,
+  applicantId: string,
+) {
+  const ctx = await getPortalContext();
+  if (ctx.role === "Viewer") return;
+
+  const supabase = await createClient();
+  await supabase.from("fee_payment_history").delete().eq("id", paymentId);
+  await recomputeFee(supabase, feeId);
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId,
+    staffId: ctx.staffId,
+    actionType: "fee_payment_deleted",
+    description: "A recorded payment was deleted",
+  });
+  refresh(applicantId);
+}
+
 /** Waiving is Admin-only (Section 2.4), even though fees are a Free feature. */
 export async function waiveFee(feeId: string, applicantId: string) {
   const ctx = await getPortalContext();

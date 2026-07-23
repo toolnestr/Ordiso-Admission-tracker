@@ -8,10 +8,14 @@ import {
   Trash2,
   Wallet,
   History,
+  Pencil,
 } from "lucide-react";
 import {
   addFee,
   recordPayment,
+  editFeeAmount,
+  editPayment,
+  deletePayment,
   waiveFee,
   addNote,
   deleteNote,
@@ -81,6 +85,8 @@ function when(iso: string) {
   });
 }
 
+type FamilyMemberFees = { id: string; name: string; fees: Fee[] };
+
 export default function DetailTabs(props: {
   applicantId: string;
   role: StaffRole;
@@ -88,6 +94,7 @@ export default function DetailTabs(props: {
   isPremium: boolean;
   formData: Record<string, unknown>;
   fees: Fee[];
+  familyFees: FamilyMemberFees[];
   notes: Note[];
   comms: Comm[];
   activity: Activity[];
@@ -155,11 +162,13 @@ function FormDataTab({ data }: { data: Record<string, unknown> }) {
 function FeesTab({
   applicantId,
   fees,
+  familyFees,
   role,
   currency,
 }: {
   applicantId: string;
   fees: Fee[];
+  familyFees: FamilyMemberFees[];
   role: StaffRole;
   currency: string;
 }) {
@@ -168,6 +177,11 @@ function FeesTab({
   const canEdit = role !== "Viewer";
 
   const totalDue = fees.reduce((s, f) => s + Number(f.remaining_balance), 0);
+  const familyDue = (familyFees ?? []).reduce(
+    (s, m) =>
+      s + m.fees.reduce((a, f) => a + Number(f.remaining_balance), 0),
+    totalDue,
+  );
 
   return (
     <div className="space-y-4">
@@ -255,6 +269,42 @@ function FeesTab({
             Assign a fee
           </button>
         ))}
+
+      {familyFees && familyFees.length > 0 && (
+        <div className="mt-6 border-t border-border pt-5">
+          <h4 className="text-[13px] font-medium text-muted-strong">
+            Siblings&apos; fees
+          </h4>
+          <p className="mt-0.5 text-[12px] text-muted">
+            Record payments for the whole family from one place.
+          </p>
+          <div className="mt-4 space-y-5">
+            {familyFees.map((m) => (
+              <div key={m.id}>
+                <div className="mb-2 text-[12.5px] font-medium">{m.name}</div>
+                <div className="space-y-3">
+                  {m.fees.map((f) => (
+                    <FeeCard
+                      key={f.id}
+                      fee={f}
+                      applicantId={m.id}
+                      role={role}
+                      currency={currency}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 flex justify-between rounded-xl border border-accent-soft bg-accent-soft px-4 py-3 text-[13.5px]">
+            <span className="text-muted-strong">Family total outstanding</span>
+            <span className="font-semibold tabular-nums text-accent">
+              {currency}
+              {familyDue}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -278,10 +328,16 @@ function FeeCard({
   currency: string;
 }) {
   const [showPay, setShowPay] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const [state, action, pending] = useActionState(recordPayment, initial);
+  const [editState, editAction, editing] = useActionState(
+    editFeeAmount,
+    initial,
+  );
   const [waiving, startWaive] = useTransition();
   const canEdit = role !== "Viewer";
   const settled = fee.status === "Paid" || fee.status === "Waived";
+  const waived = fee.status === "Waived";
 
   return (
     <div className="card-sheen rounded-xl p-4">
@@ -316,6 +372,13 @@ function FeeCard({
               <Wallet className="h-3.5 w-3.5" strokeWidth={1.8} />
               Record payment
             </button>
+            <button
+              onClick={() => setShowEdit((v) => !v)}
+              aria-label="Edit fee"
+              className="surface-2 grid place-items-center rounded-lg px-2 py-1.5 text-muted-strong transition-colors hover:bg-[var(--border)]"
+            >
+              <Pencil className="h-3.5 w-3.5" strokeWidth={1.8} />
+            </button>
             {role === "Admin" && (
               <button
                 onClick={() => startWaive(() => waiveFee(fee.id, applicantId))}
@@ -328,6 +391,54 @@ function FeeCard({
           </div>
         )}
       </div>
+
+      {showEdit && !waived && (
+        <form
+          action={editAction}
+          onSubmit={() => setTimeout(() => setShowEdit(false), 100)}
+          className="mt-4 border-t border-border pt-4"
+        >
+          <input type="hidden" name="fee_id" value={fee.id} />
+          <input type="hidden" name="applicant_id" value={applicantId} />
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="block">
+              <span className="text-[12.5px] text-muted-strong">Fee name</span>
+              <input
+                name="name"
+                defaultValue={fee.name}
+                required
+                className="surface-2 mt-1 block w-48 rounded-lg px-3 py-2 text-[14px] outline-none focus:border-border-strong"
+              />
+            </label>
+            <label className="block">
+              <span className="text-[12.5px] text-muted-strong">
+                Amount ({currency})
+              </span>
+              <input
+                name="amount"
+                type="number"
+                min={1}
+                step="0.01"
+                defaultValue={fee.amount}
+                required
+                className="surface-2 mt-1 block w-32 rounded-lg px-3 py-2 text-[14px] outline-none focus:border-border-strong"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={editing}
+              className="rounded-lg bg-foreground px-3.5 py-2 text-[13px] font-medium text-background disabled:opacity-50"
+            >
+              {editing ? "Saving…" : "Save"}
+            </button>
+          </div>
+          {editState.error && (
+            <div className="mt-2">
+              <ErrorNote text={editState.error} />
+            </div>
+          )}
+        </form>
+      )}
 
       {showPay && !settled && (
         <form
@@ -376,22 +487,112 @@ function FeeCard({
           </div>
           <div className="space-y-1.5">
             {fee.fee_payment_history.map((p) => (
-              <div
+              <PaymentRow
                 key={p.id}
-                className="flex justify-between text-[12.5px] text-muted-strong"
-              >
-                <span className="tabular-nums">
-                  {currency}
-                  {p.amount}
-                </span>
-                <span className="text-muted">
-                  {when(p.paid_on)} · {p.staff?.name ?? "System"}
-                </span>
-              </div>
+                payment={p}
+                feeId={fee.id}
+                applicantId={applicantId}
+                currency={currency}
+                canEdit={canEdit && !waived}
+              />
             ))}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function PaymentRow({
+  payment,
+  feeId,
+  applicantId,
+  currency,
+  canEdit,
+}: {
+  payment: { id: string; amount: number; paid_on: string; staff: { name: string } | null };
+  feeId: string;
+  applicantId: string;
+  currency: string;
+  canEdit: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [state, action, pending] = useActionState(editPayment, initial);
+  const [deleting, startDelete] = useTransition();
+
+  if (editing) {
+    return (
+      <form
+        action={action}
+        onSubmit={() => setTimeout(() => setEditing(false), 100)}
+        className="flex flex-wrap items-center gap-2"
+      >
+        <input type="hidden" name="payment_id" value={payment.id} />
+        <input type="hidden" name="fee_id" value={feeId} />
+        <input type="hidden" name="applicant_id" value={applicantId} />
+        <span className="text-[12.5px] text-muted">{currency}</span>
+        <input
+          name="amount"
+          type="number"
+          min={1}
+          step="0.01"
+          defaultValue={payment.amount}
+          required
+          className="surface-2 w-28 rounded-lg px-2 py-1 text-[13px] outline-none focus:border-border-strong"
+        />
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-lg bg-foreground px-3 py-1 text-[12.5px] font-medium text-background disabled:opacity-50"
+        >
+          {pending ? "…" : "Save"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditing(false)}
+          className="text-[12.5px] text-muted transition-colors hover:text-foreground"
+        >
+          Cancel
+        </button>
+        {state.error && <ErrorNote text={state.error} />}
+      </form>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between text-[12.5px] text-muted-strong">
+      <span className="tabular-nums">
+        {currency}
+        {payment.amount}
+      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-muted">
+          {when(payment.paid_on)} · {payment.staff?.name ?? "System"}
+        </span>
+        {canEdit && (
+          <span className="flex gap-1">
+            <button
+              onClick={() => setEditing(true)}
+              aria-label="Edit payment"
+              className="rounded p-0.5 text-muted transition-colors hover:text-foreground"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+            <button
+              onClick={() =>
+                startDelete(() =>
+                  deletePayment(payment.id, feeId, applicantId),
+                )
+              }
+              disabled={deleting}
+              aria-label="Delete payment"
+              className="rounded p-0.5 text-muted transition-colors hover:text-red-300 disabled:opacity-50"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </span>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,40 +1,10 @@
 import Link from "next/link";
-import { Users, Share2, Users2 } from "lucide-react";
+import { Users, Share2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
 import NewEnquiry from "./NewEnquiry";
+import ApplicantsTable, { type Applicant } from "./ApplicantsTable";
 import type { PublicField } from "@/components/enquiry/fields";
-
-const STATUS_STYLE: Record<string, string> = {
-  Applied: "badge-neutral",
-  Shortlisted: "badge-accent",
-  Interview: "badge-amber",
-  Admitted: "badge-blue",
-  Confirmed: "badge-green",
-  "Confirmed-Partial": "badge-green",
-  Rejected: "badge-red",
-};
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function displayName(form_data: Record<string, unknown>, fallback: string) {
-  if (form_data) {
-    // Prefer any field whose label mentions "name" (case-insensitive),
-    // e.g. "Full name", "Student Name" — labels are institute-defined.
-    for (const [key, val] of Object.entries(form_data)) {
-      if (/name/i.test(key) && typeof val === "string" && val.trim()) {
-        return val.trim();
-      }
-    }
-  }
-  return fallback;
-}
 
 export default async function ApplicantsPage() {
   const ctx = await getPortalContext();
@@ -43,18 +13,11 @@ export default async function ApplicantsPage() {
   const { data: applicants } = await supabase
     .from("applicants")
     .select(
-      "id, application_id, form_data, email, phone, status, source, created_at, family_id, family_label",
+      "id, application_id, form_data, email, phone, status, source, created_at, family_id, family_label, family_code",
     )
     .order("created_at", { ascending: false });
 
-  const list = applicants ?? [];
-
-  // How many applicants share each family_id, so sibling rows can show a badge.
-  const familySize: Record<string, number> = {};
-  for (const a of list) {
-    const fid = (a as { family_id: string | null }).family_id;
-    if (fid) familySize[fid] = (familySize[fid] ?? 0) + 1;
-  }
+  const list = (applicants ?? []) as Applicant[];
 
   // Staff manual-entry: Admin/Counselor can add a walk-in enquiry when a
   // session is open. Fetch the institute's own form fields + programs (RLS
@@ -139,74 +102,7 @@ export default async function ApplicantsPage() {
             </Link>
           </div>
         ) : (
-          <div className="surface overflow-x-auto rounded-2xl">
-            <table className="w-full min-w-[720px] text-left text-[13.5px]">
-              <thead>
-                <tr className="border-b border-border text-[12px] uppercase tracking-wide text-muted">
-                  <th className="px-4 py-3 font-medium">Applicant</th>
-                  <th className="px-4 py-3 font-medium">Applied</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Source</th>
-                  <th className="px-4 py-3 font-medium">Application ID</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((a) => (
-                  <tr
-                    key={a.id}
-                    className="border-b border-border transition-colors last:border-0 hover:bg-surface"
-                  >
-                    <td className="px-4 py-3">
-                      <Link href={`/applicants/${a.id}`} className="block">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium hover:text-accent">
-                            {displayName(
-                              a.form_data as Record<string, unknown>,
-                              a.email || a.phone || "Unknown",
-                            )}
-                          </span>
-                          {a.family_id && familySize[a.family_id] > 1 && (
-                            <span
-                              className="badge badge-accent inline-flex items-center gap-1"
-                              title={
-                                a.family_label
-                                  ? `${a.family_label} — ${familySize[a.family_id]} students`
-                                  : `${familySize[a.family_id]} siblings`
-                              }
-                            >
-                              <Users2 className="h-3 w-3" strokeWidth={2} />
-                              {a.family_label
-                                ? `${a.family_label} ×${familySize[a.family_id]}`
-                                : `×${familySize[a.family_id]}`}
-                            </span>
-                          )}
-                        </div>
-                        {a.email && (
-                          <div className="text-[12px] text-muted">{a.email}</div>
-                        )}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-muted-strong">
-                      {fmtDate(a.created_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`badge ${
-                          STATUS_STYLE[a.status] ?? "badge-neutral"
-                        }`}
-                      >
-                        {a.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-muted-strong">{a.source}</td>
-                    <td className="px-4 py-3 font-mono text-[12.5px] text-muted">
-                      {a.application_id}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ApplicantsTable applicants={list} />
         )}
       </div>
     </div>

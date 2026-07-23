@@ -9,10 +9,12 @@ import { deriveContact } from "@/components/enquiry/fields";
 import StudentBlocks, {
   newStudent,
   toGroupPayload,
+  mergedValues,
   type Student,
 } from "@/components/enquiry/StudentBlocks";
 
 type CreatedStudent = { application_id: string; possible_duplicate: boolean };
+type DoneState = { students: CreatedStudent[]; familyCode?: string };
 
 /**
  * Staff-facing "add enquiry" — the manual counterpart to the public apply form,
@@ -35,10 +37,11 @@ export default function NewEnquiry({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [students, setStudents] = useState<Student[]>([newStudent()]);
+  const [shared, setShared] = useState<Record<string, string>>({});
   const [familyLabel, setFamilyLabel] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<CreatedStudent[] | null>(null);
+  const [done, setDone] = useState<DoneState | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -49,6 +52,7 @@ export default function NewEnquiry({
 
   function reset() {
     setStudents([newStudent()]);
+    setShared({});
     setFamilyLabel("");
     setError(null);
     setDone(null);
@@ -80,14 +84,14 @@ export default function NewEnquiry({
 
     if (students.length === 1) {
       // Single student — no family; reuse the plain submission path.
-      const s = students[0];
-      const { email, phone } = deriveContact(fields, s.values);
+      const values = mergedValues(students[0], shared);
+      const { email, phone } = deriveContact(fields, values);
       const { data, error: rpcErr } = await supabase.rpc("submit_application", {
         p_institute_id: instituteId,
-        p_form_data: s.values,
+        p_form_data: values,
         p_email: email,
         p_phone: phone,
-        p_program_id: s.programId || null,
+        p_program_id: students[0].programId || null,
         p_source: "Direct",
       });
       setSubmitting(false);
@@ -100,12 +104,14 @@ export default function NewEnquiry({
         setError(friendlyError(res?.error));
         return;
       }
-      setDone([
-        {
-          application_id: res.application_id,
-          possible_duplicate: !!res.possible_duplicate,
-        },
-      ]);
+      setDone({
+        students: [
+          {
+            application_id: res.application_id,
+            possible_duplicate: !!res.possible_duplicate,
+          },
+        ],
+      });
       router.refresh();
       return;
     }
@@ -114,15 +120,19 @@ export default function NewEnquiry({
     const { data, error: rpcErr } = await supabase.rpc("submit_enquiry_group", {
       p_institute_id: instituteId,
       p_family_label: familyLabel,
-      p_students: toGroupPayload(students, fields),
+      p_students: toGroupPayload(students, fields, shared),
     });
     setSubmitting(false);
-    const res = data as { students?: CreatedStudent[]; error?: string };
+    const res = data as {
+      students?: CreatedStudent[];
+      family_code?: string;
+      error?: string;
+    };
     if (rpcErr || !res?.students) {
       setError(friendlyError(res?.error));
       return;
     }
-    setDone(res.students);
+    setDone({ students: res.students, familyCode: res.family_code });
     router.refresh();
   }
 
@@ -164,12 +174,24 @@ export default function NewEnquiry({
                   <CheckCircle2 className="h-6 w-6" strokeWidth={1.8} />
                 </span>
                 <h3 className="mt-4 text-[15px] font-medium">
-                  {done.length > 1
-                    ? `${done.length} students added`
+                  {done.students.length > 1
+                    ? `${done.students.length} students added`
                     : "Enquiry added"}
                 </h3>
+                {done.familyCode && (
+                  <p className="mt-2 text-[13px] text-muted">
+                    Family tracking code{" "}
+                    <span className="font-mono font-semibold text-foreground">
+                      {done.familyCode}
+                    </span>
+                    <br />
+                    <span className="text-[12px]">
+                      One code the family can use to track all their children.
+                    </span>
+                  </p>
+                )}
                 <div className="mt-3 space-y-1.5">
-                  {done.map((d) => (
+                  {done.students.map((d) => (
                     <div
                       key={d.application_id}
                       className="flex items-center justify-center gap-2 text-[13.5px]"
@@ -208,6 +230,8 @@ export default function NewEnquiry({
                   isPremium={isPremium}
                   students={students}
                   setStudents={setStudents}
+                  shared={shared}
+                  setShared={setShared}
                   familyLabel={familyLabel}
                   setFamilyLabel={setFamilyLabel}
                 />
