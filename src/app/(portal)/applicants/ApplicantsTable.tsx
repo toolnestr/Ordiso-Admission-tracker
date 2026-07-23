@@ -1,8 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Users2 } from "lucide-react";
+import { ChevronRight, Users2, MessageCircle, Phone } from "lucide-react";
+
+/**
+ * One contact button that reveals Call + WhatsApp. Call opens the phone
+ * dialer (tel:), WhatsApp opens wa.me. stopPropagation so it never triggers
+ * the row's navigation / family expand.
+ */
+function ContactMenu({ phone }: { phone: string | null }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+
+  return (
+    <div
+      ref={ref}
+      className="relative shrink-0"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Contact"
+        title="Contact"
+        className="grid h-6 w-6 place-items-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+      >
+        <Phone className="h-3.5 w-3.5" strokeWidth={1.9} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-7 z-30 flex gap-1 rounded-lg border border-border-strong bg-[#12121a] p-1 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.85)]">
+          <a
+            href={`tel:${phone}`}
+            onClick={() => setOpen(false)}
+            aria-label="Call"
+            title="Call"
+            className="grid h-7 w-7 place-items-center rounded-md text-accent transition-colors hover:bg-surface-2"
+          >
+            <Phone className="h-4 w-4" strokeWidth={1.8} />
+          </a>
+          <a
+            href={`https://wa.me/${digits}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            aria-label="WhatsApp"
+            title="WhatsApp"
+            className="grid h-7 w-7 place-items-center rounded-md text-emerald-400 transition-colors hover:bg-emerald-500/10"
+          >
+            <MessageCircle className="h-4 w-4" strokeWidth={1.8} />
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export type Applicant = {
   id: string;
@@ -164,8 +227,13 @@ function SoloRow({ a }: { a: Applicant }) {
         </span>
       </td>
       <td className="px-4 py-3 text-muted-strong">{a.source}</td>
-      <td className="px-4 py-3 font-mono text-[12.5px] text-muted">
-        {a.application_id}
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[12.5px] text-muted">
+            {a.application_id}
+          </span>
+          <ContactMenu phone={a.phone} />
+        </div>
       </td>
     </tr>
   );
@@ -243,8 +311,13 @@ function FamilyRows({
               </span>
             </td>
             <td className="px-4 py-2.5 text-muted-strong">{m.source}</td>
-            <td className="px-4 py-2.5 font-mono text-[12.5px] text-muted">
-              {m.application_id}
+            <td className="px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[12.5px] text-muted">
+                  {m.application_id}
+                </span>
+                <ContactMenu phone={m.phone} />
+              </div>
             </td>
           </tr>
         ))}
