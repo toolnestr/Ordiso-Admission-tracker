@@ -6,6 +6,7 @@ import { Plus, X, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { PublicField } from "@/components/enquiry/fields";
 import { deriveContact } from "@/components/enquiry/fields";
+import { sendReceivedEmails } from "@/app/apply/[instituteId]/actions";
 import StudentBlocks, {
   newStudent,
   toGroupPayload,
@@ -112,6 +113,7 @@ export default function NewEnquiry({
           },
         ],
       });
+      void sendReceivedEmails([res.application_id]);
       router.refresh();
       return;
     }
@@ -133,6 +135,7 @@ export default function NewEnquiry({
       return;
     }
     setDone({ students: res.students, familyCode: res.family_code });
+    void sendReceivedEmails(res.students.map((s) => s.application_id));
     router.refresh();
   }
 

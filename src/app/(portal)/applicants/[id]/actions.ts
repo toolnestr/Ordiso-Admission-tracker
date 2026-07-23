@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
 import { logActivity } from "@/lib/activity";
+import { sendApplicantEmail, statusEmailKind } from "@/lib/email";
 
 export type ActionState = { error: string | null };
 
@@ -57,6 +58,10 @@ export async function updateStatus(applicantId: string, status: string) {
     description: `Status changed: ${before?.status ?? "?"} → ${status}`,
   });
 
+  // Notify the applicant (Premium institutes only; best-effort).
+  const kind = statusEmailKind(status);
+  if (kind) await sendApplicantEmail(kind, { applicantId });
+
   refresh(applicantId);
 }
 
@@ -102,6 +107,8 @@ async function maybeAutoConfirm(applicantId: string, instituteId: string) {
     actionType: "admission_confirmed",
     description: "Admission auto-confirmed — all fees paid or waived",
   });
+
+  await sendApplicantEmail("confirmed", { applicantId });
 }
 
 export async function addFee(
@@ -428,6 +435,8 @@ export async function manualConfirm(
       : "Admission manually confirmed",
     reason,
   });
+
+  await sendApplicantEmail("confirmed", { applicantId });
 
   refresh(applicantId);
   return { error: null };

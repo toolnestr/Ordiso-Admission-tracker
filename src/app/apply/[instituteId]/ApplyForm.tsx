@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertCircle, CheckCircle2, Copy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { deriveContact } from "@/components/enquiry/fields";
+import { sendReceivedEmails } from "./actions";
 import StudentBlocks, {
   newStudent,
   toGroupPayload,
@@ -104,6 +105,7 @@ export default function ApplyForm({
           },
         ],
       });
+      void sendReceivedEmails([res.application_id]);
       return;
     }
 
@@ -123,6 +125,7 @@ export default function ApplyForm({
       return;
     }
     setResult({ students: res.students, familyCode: res.family_code });
+    void sendReceivedEmails(res.students.map((s) => s.application_id));
   }
 
   if (result) {
