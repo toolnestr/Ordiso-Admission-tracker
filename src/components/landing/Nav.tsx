@@ -73,18 +73,24 @@ export default function Nav() {
 }
 
 export function Logo({ className = "" }: { className?: string }) {
+  // A 3/4 progress-ring "O" with a marker dot — reads as Ordiso and echoes the
+  // admissions pipeline the product tracks. White mark on an accent tile.
   return (
     <span
-      className={`grid h-7 w-7 place-items-center rounded-[7px] border border-border-strong bg-surface-2 ${className}`}
+      className={`grid h-7 w-7 place-items-center rounded-[8px] bg-gradient-to-br from-[#8f88ff] to-[#6a61f0] shadow-[0_2px_10px_-3px_rgba(124,116,255,0.7)] ${className}`}
     >
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-        <path
-          d="M8 1.5 14 5v6L8 14.5 2 11V5L8 1.5Z"
-          stroke="var(--accent)"
-          strokeWidth="1.4"
-          strokeLinejoin="round"
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <circle
+          cx="12"
+          cy="12"
+          r="7"
+          stroke="white"
+          strokeWidth="2.6"
+          strokeLinecap="round"
+          strokeDasharray="33 11"
+          transform="rotate(-90 12 12)"
         />
-        <circle cx="8" cy="8" r="2.1" fill="var(--accent)" />
+        <circle cx="12" cy="5" r="1.9" fill="white" />
       </svg>
     </span>
   );

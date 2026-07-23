@@ -19,14 +19,14 @@ import {
 import { Logo } from "@/components/landing/Nav";
 import type { StaffRole } from "@/lib/portal";
 
-type NavItem = {
+export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
   roles?: StaffRole[]; // undefined = all roles
 };
 
-const nav: NavItem[] = [
+export const nav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/applicants", label: "Applicants", icon: Users },
   {

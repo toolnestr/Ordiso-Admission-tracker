@@ -194,7 +194,13 @@ export default function Select({
                     role="option"
                     aria-selected={isSel}
                     onMouseEnter={() => setActive(i)}
-                    onClick={() => choose(i)}
+                    // Commit on mousedown (not click): selecting after a hover
+                    // re-render could otherwise drop the click and leave the
+                    // list open. preventDefault keeps focus on the trigger.
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      choose(i);
+                    }}
                     className={`flex cursor-pointer items-start gap-2 rounded-lg px-2.5 py-2 text-[13.5px] ${
                       i === active ? "bg-surface-2" : ""
                     }`}

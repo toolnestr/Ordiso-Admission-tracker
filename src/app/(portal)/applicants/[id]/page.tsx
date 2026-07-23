@@ -40,7 +40,7 @@ export default async function ApplicantDetailPage({
   const { data: applicant } = await supabase
     .from("applicants")
     .select(
-      "id, application_id, form_data, email, phone, status, source, created_at, confirmed_at, confirmation_reason, fee_exempt, fee_exempt_reason, family_id, family_label, programs(name)",
+      "id, application_id, form_data, email, phone, status, source, created_at, confirmed_at, confirmation_reason, fee_exempt, fee_exempt_reason, family_id, family_label, family_code, programs(name)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -192,37 +192,52 @@ export default async function ApplicantDetailPage({
         </div>
       </div>
 
-      {/* Siblings / family group */}
+      {/* Siblings / family group — every student as a chip; current one is
+          highlighted. Scrolls horizontally if the family is large. */}
       {siblings && siblings.length > 0 && (
         <div className="card-sheen mt-5 rounded-2xl p-5">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Users2 className="h-4 w-4 text-accent" strokeWidth={1.8} />
             <h3 className="text-[14px] font-medium">
               {applicant.family_label
                 ? `${applicant.family_label} — family`
-                : "Siblings"}
+                : "Family"}
             </h3>
             <span className="text-[12px] text-muted">
               {siblings.length + 1} students
             </span>
+            {applicant.family_code && (
+              <span className="ml-auto font-mono text-[12.5px] text-accent">
+                {applicant.family_code}
+              </span>
+            )}
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {siblings.map((s) => (
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {[
+              { id: applicant.id, form_data, status: applicant.status, self: true },
+              ...siblings.map((s) => ({
+                id: s.id,
+                form_data: (s.form_data ?? {}) as Record<string, unknown>,
+                status: s.status,
+                self: false,
+              })),
+            ].map((m) => (
               <Link
-                key={s.id}
-                href={`/applicants/${s.id}`}
-                className="surface flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] transition-colors hover:border-border-strong"
+                key={m.id}
+                href={`/applicants/${m.id}`}
+                className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-colors ${
+                  m.self
+                    ? "border-accent-soft bg-accent-soft"
+                    : "surface hover:border-border-strong"
+                }`}
               >
                 <span className="font-medium">
-                  {displayName(
-                    (s.form_data ?? {}) as Record<string, unknown>,
-                    s.application_id,
-                  )}
+                  {displayName(m.form_data, "Student")}
                 </span>
                 <span
-                  className={`badge ${STATUS_STYLE[s.status] ?? "badge-neutral"}`}
+                  className={`badge ${STATUS_STYLE[m.status] ?? "badge-neutral"}`}
                 >
-                  {s.status}
+                  {m.status}
                 </span>
               </Link>
             ))}
