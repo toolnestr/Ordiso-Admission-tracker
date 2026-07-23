@@ -69,7 +69,7 @@ export default async function ApplicantsPage() {
               instituteId={ctx.institute.id}
               fields={enquiryFields}
               programs={enquiryPrograms}
-              isPremium={ctx.institute.plan === "Premium"}
+              isPremium={ctx.features.uploads}
             />
           )}
           <Link

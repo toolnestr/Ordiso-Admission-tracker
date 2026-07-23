@@ -291,7 +291,7 @@ export default async function ApplicantDetailPage({
           applicantId={applicant.id}
           role={ctx.role}
           currency={ctx.institute.currency}
-          isPremium={ctx.institute.plan === "Premium"}
+          isPremium={ctx.features.uploads}
           formData={form_data}
           fees={(fees ?? []) as never[]}
           familyFees={(familyFees ?? []) as never[]}

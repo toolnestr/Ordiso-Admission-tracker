@@ -1,5 +1,6 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/server";
+import { planFeatures, type Plan } from "@/lib/plan";
 
 /**
  * Transactional email via Brevo's HTTP API (Cloudflare Workers can't open raw
@@ -223,7 +224,9 @@ export async function sendApplicantEmail(
   const svc = createServiceClient();
   let q = svc
     .from("applicants")
-    .select("email, application_id, form_data, institutes(display_name, plan)")
+    .select(
+      "email, application_id, form_data, institutes(display_name, plan, plan_expires_at)",
+    )
     .limit(1);
   q = ref.applicantId
     ? q.eq("id", ref.applicantId)
@@ -234,8 +237,13 @@ export async function sendApplicantEmail(
 
   const inst = Array.isArray(data.institutes)
     ? data.institutes[0]
-    : (data.institutes as { display_name: string; plan: string } | null);
-  if (!inst || inst.plan !== "Premium") return; // paid feature
+    : (data.institutes as {
+        display_name: string;
+        plan: Plan;
+        plan_expires_at: string | null;
+      } | null);
+  // Automated emails require an active email-capable plan (Pro/Enterprise).
+  if (!inst || !planFeatures(inst.plan, inst.plan_expires_at).emails) return;
 
   const name = displayName(
     data.form_data as Record<string, unknown> | null,

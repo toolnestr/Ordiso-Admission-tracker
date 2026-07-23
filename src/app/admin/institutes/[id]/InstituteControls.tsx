@@ -14,27 +14,79 @@ const initial: DeleteState = { error: null };
 export function PlanControl({
   instituteId,
   plan,
+  expiresAt,
+  billingCycle,
 }: {
   instituteId: string;
   plan: string;
+  expiresAt: string | null;
+  billingCycle: string | null;
 }) {
   const [pending, start] = useTransition();
+  const [cycle, setCycle] = useState<"monthly" | "yearly">(
+    billingCycle === "yearly" ? "yearly" : "monthly",
+  );
+  const current = plan === "Premium" ? "Pro" : plan;
+  const expired = expiresAt ? new Date(expiresAt).getTime() < Date.now() : false;
+
   return (
-    <div className="flex gap-2">
-      {(["Free", "Premium"] as const).map((p) => (
-        <button
-          key={p}
-          disabled={pending || p === plan}
-          onClick={() => start(() => setInstitutePlan(instituteId, p))}
-          className={`rounded-lg border px-3 py-1.5 text-[12.5px] font-medium transition-colors disabled:cursor-not-allowed ${
-            p === plan
-              ? "border-accent bg-accent-soft text-accent"
-              : "border-border text-muted-strong hover:text-foreground disabled:opacity-40"
-          }`}
-        >
-          {p}
-        </button>
-      ))}
+    <div className="space-y-3">
+      {plan !== "Free" && (
+        <div className="text-[12.5px] text-muted">
+          {expiresAt ? (
+            <>
+              {billingCycle ?? "monthly"} ·{" "}
+              <span className={expired ? "text-red-300" : "text-muted-strong"}>
+                {expired ? "expired" : "expires"}{" "}
+                {new Date(expiresAt).toLocaleDateString(undefined, {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+            </>
+          ) : (
+            "no expiry set"
+          )}
+        </div>
+      )}
+
+      <div className="flex gap-1">
+        {(["monthly", "yearly"] as const).map((c) => (
+          <button
+            key={c}
+            onClick={() => setCycle(c)}
+            className={`rounded-lg px-2.5 py-1 text-[11.5px] font-medium capitalize transition-colors ${
+              cycle === c
+                ? "bg-[var(--border)] text-foreground"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {(["Free", "Starter", "Pro", "Enterprise"] as const).map((p) => (
+          <button
+            key={p}
+            disabled={pending}
+            onClick={() =>
+              start(() =>
+                setInstitutePlan(instituteId, p, p === "Free" ? null : cycle),
+              )
+            }
+            className={`rounded-lg border px-3 py-1.5 text-[12.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+              p === current
+                ? "border-accent bg-accent-soft text-accent"
+                : "border-border text-muted-strong hover:text-foreground"
+            }`}
+          >
+            {p === current ? `${p} ✓` : `Activate ${p}`}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

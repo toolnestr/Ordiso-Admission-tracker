@@ -6,7 +6,7 @@ import { useState } from "react";
 import { SectionHeading } from "./HowItWorks";
 
 const rows: { label: string; free: boolean; premium: boolean }[] = [
-  { label: "200 students per admission session", free: true, premium: true },
+  { label: "150 students per admission session", free: true, premium: true },
   { label: "Custom drag-and-drop form builder", free: true, premium: true },
   { label: "Public link and QR code sharing", free: true, premium: true },
   { label: "Full dashboard and analytics", free: true, premium: true },
@@ -82,7 +82,7 @@ export default function Comparison() {
       </div>
 
       <p className="mt-6 text-center text-[13.5px] text-muted">
-        <span className="font-medium text-foreground">200 students free</span>{" "}
+        <span className="font-medium text-foreground">150 students free</span>{" "}
         every admission session — no credit card, ever.
       </p>
     </section>

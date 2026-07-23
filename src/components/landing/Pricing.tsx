@@ -4,10 +4,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, Mail, MessageCircle, X } from "lucide-react";
 import { useState } from "react";
 import { SectionHeading } from "./HowItWorks";
+import { YEARLY_DISCOUNT } from "@/lib/plan";
 
 type Tier = {
   name: string;
   price: string;
+  monthly?: number; // paid tiers: base $/mo, used for the yearly toggle
   cadence?: string;
   tagline: string;
   features: string[];
@@ -23,7 +25,7 @@ const tiers: Tier[] = [
     cadence: "/ forever",
     tagline: "Run a full admission session, free.",
     features: [
-      "200 students per session",
+      "150 students per session",
       "Custom form builder",
       "Public link & QR code",
       "Full dashboard & analytics",
@@ -36,6 +38,7 @@ const tiers: Tier[] = [
   {
     name: "Starter",
     price: "$3",
+    monthly: 3,
     cadence: "/ month",
     tagline: "Grow past the free limits.",
     features: [
@@ -51,6 +54,7 @@ const tiers: Tier[] = [
   {
     name: "Pro",
     price: "$10",
+    monthly: 10,
     cadence: "/ month",
     tagline: "Documents & automated email.",
     features: [
@@ -80,16 +84,38 @@ const tiers: Tier[] = [
 
 export default function Pricing() {
   const [contactPlan, setContactPlan] = useState<string | null>(null);
+  const [yearly, setYearly] = useState(true);
 
   return (
     <section id="pricing" className="relative mx-auto max-w-6xl px-6 py-28">
       <SectionHeading
         eyebrow="Pricing"
         title="Simple, honest pricing"
-        subtitle="Start free forever. Upgrade only when you outgrow it — paid plans are sales-assisted while we finalize checkout, so just reach out."
+        subtitle="Start free forever. Upgrade only when you outgrow it — save 30% on any paid plan when billed yearly."
       />
 
-      <div className="mt-16 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-10 flex items-center justify-center gap-3">
+        <div className="surface-2 flex rounded-lg p-0.5">
+          {([false, true] as const).map((y) => (
+            <button
+              key={String(y)}
+              onClick={() => setYearly(y)}
+              className={`rounded-md px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
+                yearly === y
+                  ? "bg-[var(--border)] text-foreground"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              {y ? "Yearly" : "Monthly"}
+            </button>
+          ))}
+        </div>
+        <span className="rounded-full bg-accent-soft px-2.5 py-1 text-[11.5px] font-medium text-accent">
+          Save 30% yearly
+        </span>
+      </div>
+
+      <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {tiers.map((t, i) => (
           <motion.div
             key={t.name}
@@ -111,11 +137,17 @@ export default function Pricing() {
             </div>
             <div className="mt-4 flex items-baseline gap-1">
               <span className="text-3xl font-semibold tracking-tight">
-                {t.price}
+                {t.monthly
+                  ? `$${Math.round(t.monthly * (yearly ? 1 - YEARLY_DISCOUNT : 1) * 100) / 100}`
+                  : t.price}
               </span>
-              {t.cadence && (
-                <span className="text-[13px] text-muted">{t.cadence}</span>
-              )}
+              <span className="text-[12px] text-muted">
+                {t.monthly
+                  ? yearly
+                    ? "/ mo · billed yearly"
+                    : "/ month"
+                  : t.cadence}
+              </span>
             </div>
             <p className="mt-2 text-[13px] text-muted">{t.tagline}</p>
 

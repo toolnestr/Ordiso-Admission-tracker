@@ -2,6 +2,7 @@
 
 import { sendApplicantEmail } from "@/lib/email";
 import { createServiceClient } from "@/lib/supabase/server";
+import { planFeatures, type Plan } from "@/lib/plan";
 
 /**
  * Fire the "application received" email for freshly-created applicants. Called
@@ -32,14 +33,14 @@ export async function uploadApplicantDocument(
   const svc = createServiceClient();
   const { data } = await svc
     .from("applicants")
-    .select("id, institute_id, institutes(plan)")
+    .select("id, institute_id, institutes(plan, plan_expires_at)")
     .eq("application_id", applicationId)
     .maybeSingle();
   if (!data) return;
   const inst = Array.isArray(data.institutes)
     ? data.institutes[0]
-    : (data.institutes as { plan: string } | null);
-  if (inst?.plan !== "Premium") return;
+    : (data.institutes as { plan: Plan; plan_expires_at: string | null } | null);
+  if (!inst || !planFeatures(inst.plan, inst.plan_expires_at).uploads) return;
 
   const ext = (file.name.split(".").pop() || "bin").toLowerCase();
   const path = `${data.institute_id}/${data.id}/${crypto.randomUUID()}.${ext}`;

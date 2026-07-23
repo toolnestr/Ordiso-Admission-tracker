@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertCircle, CheckCircle2, Copy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { deriveContact } from "@/components/enquiry/fields";
+import { planFeatures, type Plan } from "@/lib/plan";
 import { sendReceivedEmails, uploadApplicantDocument } from "./actions";
 import StudentBlocks, {
   newStudent,
@@ -19,7 +20,8 @@ export type PublicForm = {
   institute: {
     id: string;
     display_name: string;
-    plan: "Free" | "Premium";
+    plan: Plan;
+    plan_expires_at?: string | null;
   };
   session: {
     id: string;
@@ -57,7 +59,10 @@ export default function ApplyForm({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
 
-  const isPremium = form.institute.plan === "Premium";
+  const isPremium = planFeatures(
+    form.institute.plan,
+    form.institute.plan_expires_at,
+  ).uploads;
 
   function setFile(key: string, label: string, file: File | undefined) {
     setFiles((prev) => ({ ...prev, [key]: { ...prev[key], [label]: file } }));

@@ -30,7 +30,7 @@ const PREMIUM = [
 
 export default async function UpgradePage() {
   const ctx = await getPortalContext();
-  const isPremium = ctx.institute.plan === "Premium";
+  const isPremium = ctx.institute.plan !== "Free";
 
   if (isPremium) {
     return (

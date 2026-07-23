@@ -457,8 +457,8 @@ export async function uploadDocument(
 ): Promise<ActionState> {
   const ctx = await getPortalContext();
   if (ctx.role === "Viewer") return { error: "You don't have permission." };
-  if (ctx.institute.plan !== "Premium") {
-    return { error: "Document uploads are a Premium feature." };
+  if (!ctx.features.uploads) {
+    return { error: "Document uploads require the Pro plan." };
   }
 
   const applicantId = String(formData.get("applicant_id") || "");

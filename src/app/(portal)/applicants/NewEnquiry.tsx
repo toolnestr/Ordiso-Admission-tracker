@@ -65,7 +65,7 @@ export default function NewEnquiry({
 
   function friendlyError(code?: string) {
     if (code === "session_full")
-      return "This would exceed the free-tier cap of 200 for this session.";
+      return "This would exceed the free-tier cap of 150 for this session.";
     if (code === "no_open_session" || code === "session_closed")
       return "There's no open session to add an enquiry to.";
     return "Couldn't save the enquiry. Please try again.";

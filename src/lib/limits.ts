@@ -8,7 +8,7 @@
  */
 
 /** Max applicants per admission session on the Free plan. */
-export const FREE_TIER_CAP = 200;
+export const FREE_TIER_CAP = 150;
 
 /** Max staff accounts (any mix of roles) on the Free plan. */
 export const FREE_STAFF_SEATS = 3;

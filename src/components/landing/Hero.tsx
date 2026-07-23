@@ -36,7 +36,7 @@ export default function Hero() {
         className="surface group mb-7 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12.5px] text-muted-strong transition-colors hover:text-foreground"
       >
         <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-        200 students free every admission session
+        150 students free every admission session
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
       </motion.a>
 
@@ -127,7 +127,7 @@ function DashboardMockup() {
           <span className="h-2.5 w-2.5 rounded-full bg-white/10" />
         </div>
         <span className="rounded-md border border-border bg-surface px-2 py-1 text-[10.5px] text-muted">
-          Fall 2026 · 142 / 200 students
+          Fall 2026 · 118 / 150 students
         </span>
       </div>
 

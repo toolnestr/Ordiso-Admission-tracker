@@ -5,7 +5,8 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { requireSuperAdmin, logSuperAdminAction } from "@/lib/superadmin";
 
 const STATUSES = ["Active", "Suspended", "Deactivated"] as const;
-const PLANS = ["Free", "Premium"] as const;
+const PLANS = ["Free", "Starter", "Pro", "Enterprise"] as const;
+const CYCLES = ["monthly", "yearly"] as const;
 
 export async function setInstituteStatus(
   instituteId: string,
@@ -33,10 +34,16 @@ export async function setInstituteStatus(
   revalidatePath(`/admin/institutes/${instituteId}`);
 }
 
-/** Billing is sales-assisted (Sections 1.2/2.10), so plan changes are manual. */
+/**
+ * Super Admin activates a plan a user requested. Paid plans get an expiry set
+ * from the billing cycle (monthly = +1 month, yearly = +1 year); Free clears
+ * the cycle/expiry. Downgrades are never destructive — paid-only data stays
+ * put and just becomes view-locked (Section 6.6).
+ */
 export async function setInstitutePlan(
   instituteId: string,
   plan: (typeof PLANS)[number],
+  cycle: (typeof CYCLES)[number] | null,
 ) {
   await requireSuperAdmin();
   if (!PLANS.includes(plan)) return;
@@ -48,14 +55,30 @@ export async function setInstitutePlan(
     .eq("id", instituteId)
     .single();
 
-  // Downgrades are never destructive (Section 6.6): Premium-only data stays
-  // put and simply becomes view-locked until they upgrade again.
-  await service.from("institutes").update({ plan }).eq("id", instituteId);
+  let billing_cycle: string | null = null;
+  let plan_expires_at: string | null = null;
+  if (plan !== "Free") {
+    billing_cycle = cycle && CYCLES.includes(cycle) ? cycle : "monthly";
+    const d = new Date();
+    if (billing_cycle === "yearly") d.setFullYear(d.getFullYear() + 1);
+    else d.setMonth(d.getMonth() + 1);
+    plan_expires_at = d.toISOString();
+  }
+
+  // Enterprise is stored as-is; older 'Premium' rows keep working (alias Pro).
+  await service
+    .from("institutes")
+    .update({ plan, billing_cycle, plan_expires_at })
+    .eq("id", instituteId);
 
   await logSuperAdminAction({
     actionType: "institute_plan_changed",
     targetInstituteId: instituteId,
-    description: `${before?.display_name ?? "Institute"}: ${before?.plan} → ${plan}`,
+    description: `${before?.display_name ?? "Institute"}: ${before?.plan} → ${plan}${
+      plan_expires_at
+        ? ` (${billing_cycle}, expires ${plan_expires_at.slice(0, 10)})`
+        : ""
+    }`,
   });
 
   revalidatePath("/admin");

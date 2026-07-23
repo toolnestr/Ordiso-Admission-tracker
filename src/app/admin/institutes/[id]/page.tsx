@@ -25,7 +25,7 @@ export default async function AdminInstitutePage({
   const { data: inst } = await service
     .from("institutes")
     .select(
-      "id, display_name, plan, status, created_at, contact_email, contact_phone, currency, timezone",
+      "id, display_name, plan, plan_expires_at, billing_cycle, status, created_at, contact_email, contact_phone, currency, timezone",
     )
     .eq("id", id)
     .maybeSingle();
@@ -102,7 +102,12 @@ export default async function AdminInstitutePage({
             never deletes Premium data.
           </p>
           <div className="mt-4">
-            <PlanControl instituteId={inst.id} plan={inst.plan} />
+            <PlanControl
+              instituteId={inst.id}
+              plan={inst.plan}
+              expiresAt={inst.plan_expires_at}
+              billingCycle={inst.billing_cycle}
+            />
           </div>
         </div>
 

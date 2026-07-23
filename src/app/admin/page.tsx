@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, Search } from "lucide-react";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireSuperAdmin } from "@/lib/superadmin";
+import { planLabel } from "@/lib/plan";
 
 const STATUS_BADGE: Record<string, string> = {
   Active: "badge-green",
@@ -57,7 +58,7 @@ export default async function AdminPage({
   });
 
   const totalApplicants = (applicants ?? []).length;
-  const premium = all.filter((i) => i.plan === "Premium").length;
+  const premium = all.filter((i) => i.plan !== "Free").length;
   const since = new Date();
   since.setDate(since.getDate() - 30);
   const newSignups = all.filter((i) => new Date(i.created_at) >= since).length;
@@ -155,8 +156,8 @@ export default async function AdminPage({
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`badge ${i.plan === "Premium" ? "badge-accent" : "badge-neutral"}`}>
-                      {i.plan}
+                    <span className={`badge ${i.plan !== "Free" ? "badge-accent" : "badge-neutral"}`}>
+                      {planLabel(i.plan)}
                     </span>
                   </td>
                   <td className="px-4 py-3">

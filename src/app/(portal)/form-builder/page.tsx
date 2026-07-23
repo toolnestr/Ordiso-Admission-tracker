@@ -31,7 +31,7 @@ export default async function FormBuilderPage() {
     .order("display_order", { ascending: true });
 
   const list = fields ?? [];
-  const isPremium = ctx.institute.plan === "Premium";
+  const isPremium = ctx.features.uploads;
   const applyPath = `/apply/${ctx.institute.id}`;
 
   return (

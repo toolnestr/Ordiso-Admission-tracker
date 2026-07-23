@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { planFeatures, type Plan, type Features } from "@/lib/plan";
 
 export type StaffRole = "Admin" | "Counselor" | "Viewer";
 
@@ -11,9 +12,12 @@ export type PortalContext = {
   institute: {
     id: string;
     display_name: string;
-    plan: "Free" | "Premium";
+    plan: Plan;
+    plan_expires_at: string | null;
     currency: string;
   };
+  /** Effective feature access for the institute's plan (expiry-aware). */
+  features: Features;
   session: {
     id: string;
     name: string;
@@ -40,7 +44,9 @@ export async function getPortalContext(): Promise<PortalContext> {
 
   const { data: staff } = await supabase
     .from("staff")
-    .select("id, name, role, institutes(id, display_name, plan, currency, status)")
+    .select(
+      "id, name, role, institutes(id, display_name, plan, plan_expires_at, currency, status)",
+    )
     .eq("auth_user_id", user.id)
     .single();
 
@@ -65,6 +71,9 @@ export async function getPortalContext(): Promise<PortalContext> {
     .limit(1)
     .maybeSingle();
 
+  const plan = institute.plan as Plan;
+  const expiresAt = (institute.plan_expires_at as string | null) ?? null;
+
   return {
     userId: user.id,
     staffId: staff.id,
@@ -73,9 +82,11 @@ export async function getPortalContext(): Promise<PortalContext> {
     institute: {
       id: institute.id,
       display_name: institute.display_name,
-      plan: institute.plan,
+      plan,
+      plan_expires_at: expiresAt,
       currency: institute.currency,
     },
+    features: planFeatures(plan, expiresAt),
     session,
   };
 }
