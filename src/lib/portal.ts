@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { planFeatures, type Plan, type Features } from "@/lib/plan";
+import {
+  planFeatures,
+  planState,
+  type Plan,
+  type Features,
+  type PlanState,
+} from "@/lib/plan";
 
 export type StaffRole = "Admin" | "Counselor" | "Viewer";
 
@@ -14,10 +20,13 @@ export type PortalContext = {
     display_name: string;
     plan: Plan;
     plan_expires_at: string | null;
+    grace_until: string | null;
     currency: string;
   };
-  /** Effective feature access for the institute's plan (expiry-aware). */
+  /** Effective feature access for the institute's plan (expiry + grace aware). */
   features: Features;
+  /** 'active' | 'grace' | 'expired' — drives the renewal banner. */
+  planState: PlanState;
   session: {
     id: string;
     name: string;
@@ -45,7 +54,7 @@ export async function getPortalContext(): Promise<PortalContext> {
   const { data: staff } = await supabase
     .from("staff")
     .select(
-      "id, name, role, institutes(id, display_name, plan, plan_expires_at, currency, status)",
+      "id, name, role, institutes(id, display_name, plan, plan_expires_at, grace_until, currency, status)",
     )
     .eq("auth_user_id", user.id)
     .single();
@@ -73,6 +82,7 @@ export async function getPortalContext(): Promise<PortalContext> {
 
   const plan = institute.plan as Plan;
   const expiresAt = (institute.plan_expires_at as string | null) ?? null;
+  const graceUntil = (institute.grace_until as string | null) ?? null;
 
   return {
     userId: user.id,
@@ -84,9 +94,11 @@ export async function getPortalContext(): Promise<PortalContext> {
       display_name: institute.display_name,
       plan,
       plan_expires_at: expiresAt,
+      grace_until: graceUntil,
       currency: institute.currency,
     },
-    features: planFeatures(plan, expiresAt),
+    features: planFeatures(plan, expiresAt, graceUntil),
+    planState: planState(plan, expiresAt, graceUntil),
     session,
   };
 }

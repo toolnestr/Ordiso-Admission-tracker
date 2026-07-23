@@ -3,7 +3,13 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireSuperAdmin } from "@/lib/superadmin";
-import { PlanControl, StatusControl, DeleteControl } from "./InstituteControls";
+import {
+  PlanControl,
+  StatusControl,
+  DeleteControl,
+  GraceControl,
+  AnnouncementControl,
+} from "./InstituteControls";
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -25,7 +31,7 @@ export default async function AdminInstitutePage({
   const { data: inst } = await service
     .from("institutes")
     .select(
-      "id, display_name, plan, plan_expires_at, billing_cycle, status, created_at, contact_email, contact_phone, currency, timezone",
+      "id, display_name, plan, plan_expires_at, billing_cycle, grace_until, status, created_at, contact_email, contact_phone, currency, timezone",
     )
     .eq("id", id)
     .maybeSingle();
@@ -55,6 +61,19 @@ export default async function AdminInstitutePage({
         .order("created_at", { ascending: false })
         .limit(10),
     ]);
+
+  const { data: annRows } = await service
+    .from("announcements")
+    .select("id, message, mode, active")
+    .eq("institute_id", id)
+    .eq("active", true)
+    .order("created_at", { ascending: false });
+  const announcements = (annRows ?? []) as {
+    id: string;
+    message: string;
+    mode: string;
+    active: boolean;
+  }[];
 
   return (
     <div>
@@ -109,6 +128,18 @@ export default async function AdminInstitutePage({
               billingCycle={inst.billing_cycle}
             />
           </div>
+          <div className="mt-5 border-t border-border pt-4">
+            <h4 className="text-[13px] font-medium">Grace period</h4>
+            <p className="mt-1 text-[12px] text-muted">
+              Keep an expired plan working while they renew.
+            </p>
+            <div className="mt-3">
+              <GraceControl
+                instituteId={inst.id}
+                graceUntil={inst.grace_until}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="card-sheen rounded-2xl p-5 lg:col-span-2">
@@ -119,6 +150,21 @@ export default async function AdminInstitutePage({
           </p>
           <div className="mt-4">
             <StatusControl instituteId={inst.id} status={inst.status} />
+          </div>
+
+          <div className="mt-5 border-t border-border pt-4">
+            <h4 className="flex items-center gap-1.5 text-[13px] font-medium">
+              Announcements
+            </h4>
+            <p className="mt-1 text-[12px] text-muted">
+              Shown to this institute&apos;s staff on login.
+            </p>
+            <div className="mt-3">
+              <AnnouncementControl
+                instituteId={inst.id}
+                announcements={announcements}
+              />
+            </div>
           </div>
         </div>
       </div>

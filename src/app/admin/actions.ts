@@ -87,6 +87,70 @@ export async function setInstitutePlan(
 
 export type DeleteState = { error: string | null };
 
+/** Post an announcement shown to the institute's staff on login. */
+export async function postAnnouncement(
+  _prev: DeleteState,
+  formData: FormData,
+): Promise<DeleteState> {
+  await requireSuperAdmin();
+  const instituteId = String(formData.get("institute_id") || "");
+  const message = String(formData.get("message") || "").trim();
+  const mode = String(formData.get("mode") || "recurring");
+  if (!message) return { error: "Write a message." };
+
+  const service = createServiceClient();
+  await service.from("announcements").insert({
+    institute_id: instituteId || null,
+    message,
+    mode: mode === "once" ? "once" : "recurring",
+  });
+
+  await logSuperAdminAction({
+    actionType: "announcement_posted",
+    targetInstituteId: instituteId || null,
+    description: `Announcement posted (${mode}): ${message.slice(0, 80)}`,
+  });
+
+  revalidatePath(`/admin/institutes/${instituteId}`);
+  return { error: null };
+}
+
+export async function deactivateAnnouncement(id: string, instituteId: string) {
+  await requireSuperAdmin();
+  const service = createServiceClient();
+  await service.from("announcements").update({ active: false }).eq("id", id);
+  revalidatePath(`/admin/institutes/${instituteId}`);
+}
+
+/**
+ * Grant (or clear) a grace period: while grace_until is in the future, an
+ * expired paid plan keeps working and the institute sees a renewal banner.
+ * `days` <= 0 clears it.
+ */
+export async function setGracePeriod(instituteId: string, days: number) {
+  await requireSuperAdmin();
+  const service = createServiceClient();
+  let grace_until: string | null = null;
+  if (days > 0) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    grace_until = d.toISOString();
+  }
+  await service
+    .from("institutes")
+    .update({ grace_until })
+    .eq("id", instituteId);
+
+  await logSuperAdminAction({
+    actionType: "grace_period_set",
+    targetInstituteId: instituteId,
+    description: grace_until
+      ? `Grace period: ${days} days (until ${grace_until.slice(0, 10)})`
+      : "Grace period cleared",
+  });
+  revalidatePath(`/admin/institutes/${instituteId}`);
+}
+
 /**
  * Permanent deletion — Super-Admin-only by design (Section 3.1), which is why
  * institutes can only *deactivate* themselves. Requires typing the exact name.

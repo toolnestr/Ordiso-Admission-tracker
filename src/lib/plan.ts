@@ -38,15 +38,45 @@ export type Features = {
   exports: boolean;
 };
 
-export function isPlanActive(plan: Plan, expiresAt?: string | null): boolean {
+/** Active if not expired, OR still within a grace window granted by an admin. */
+export function isPlanActive(
+  plan: Plan,
+  expiresAt?: string | null,
+  graceUntil?: string | null,
+): boolean {
   if (plan === "Free") return true;
+  const now = Date.now();
   if (!expiresAt) return true; // no expiry recorded = active
-  return new Date(expiresAt).getTime() > Date.now();
+  if (new Date(expiresAt).getTime() > now) return true;
+  if (graceUntil && new Date(graceUntil).getTime() > now) return true; // grace
+  return false;
 }
 
-/** Effective features for a plan, downgrading to Free if the plan has lapsed. */
-export function planFeatures(plan: Plan, expiresAt?: string | null): Features {
-  const effective: Plan = isPlanActive(plan, expiresAt) ? plan : "Free";
+export type PlanState = "active" | "grace" | "expired";
+
+/** Whether a paid plan is running normally, in its grace window, or lapsed. */
+export function planState(
+  plan: Plan,
+  expiresAt?: string | null,
+  graceUntil?: string | null,
+): PlanState {
+  if (plan === "Free") return "active";
+  const now = Date.now();
+  if (!expiresAt || new Date(expiresAt).getTime() > now) return "active";
+  if (graceUntil && new Date(graceUntil).getTime() > now) return "grace";
+  return "expired";
+}
+
+/** Effective features for a plan, downgrading to Free once the plan (and any
+ * grace window) has lapsed. */
+export function planFeatures(
+  plan: Plan,
+  expiresAt?: string | null,
+  graceUntil?: string | null,
+): Features {
+  const effective: Plan = isPlanActive(plan, expiresAt, graceUntil)
+    ? plan
+    : "Free";
   switch (effective) {
     case "Starter":
       return {
