@@ -34,6 +34,7 @@ export type FollowUpItem = {
 
 const TABS = [
   { key: "today", label: "Today" },
+  { key: "upcoming", label: "Upcoming" },
   { key: "overdue", label: "Overdue" },
   { key: "month", label: "This month" },
 ] as const;
@@ -133,14 +134,15 @@ export default function FollowUpsView({
   function inBucket(it: FollowUpItem, t: TabKey) {
     const pending = it.status !== "Done";
     if (t === "today") return it.dueDate === today;
+    if (t === "upcoming") return pending && it.dueDate > today;
     if (t === "overdue") return pending && it.dueDate < today;
     return pending && it.dueDate >= monthStart && it.dueDate <= today;
   }
 
   // Tab badges count DISTINCT families/applicants (matches the dashboard tiles).
   const counts = useMemo(() => {
-    const c: Record<TabKey, number> = { today: 0, overdue: 0, month: 0 };
-    for (const t of ["today", "overdue", "month"] as TabKey[]) {
+    const c: Record<TabKey, number> = { today: 0, upcoming: 0, overdue: 0, month: 0 };
+    for (const t of ["today", "upcoming", "overdue", "month"] as TabKey[]) {
       c[t] = new Set(items.filter((i) => inBucket(i, t)).map(keyOf)).size;
     }
     return c;
@@ -289,7 +291,9 @@ export default function FollowUpsView({
                 className={`ml-1.5 rounded-full px-1.5 text-[11px] ${
                   t.key === "overdue"
                     ? "bg-red-500/15 text-red-300"
-                    : "bg-amber-500/15 text-amber-300"
+                    : t.key === "upcoming"
+                      ? "bg-accent-soft text-accent"
+                      : "bg-amber-500/15 text-amber-300"
                 }`}
               >
                 {counts[t.key]}
@@ -310,9 +314,11 @@ export default function FollowUpsView({
             <p className="mt-3 text-[13.5px] text-muted">
               {tab === "today"
                 ? "No follow-ups due today."
-                : tab === "overdue"
-                  ? "Nothing overdue — you're all caught up."
-                  : "No pending follow-ups this month."}
+                : tab === "upcoming"
+                  ? "No follow-ups scheduled ahead."
+                  : tab === "overdue"
+                    ? "Nothing overdue — you're all caught up."
+                    : "No pending follow-ups this month."}
             </p>
           </div>
         ) : (
