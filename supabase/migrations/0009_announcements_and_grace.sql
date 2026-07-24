@@ -1,8 +1,9 @@
--- Super Admin announcements shown to institute staff on login, and a grace
--- period during which an expired paid plan keeps working while the institute
--- is nudged to renew.
+-- Clean slate for these brand-new tables (a partial earlier run may have left
+-- an announcements table without the 'active' column). No real data yet.
+drop table if exists announcement_dismissals cascade;
+drop table if exists announcements cascade;
 
-create table if not exists announcements (
+create table announcements (
   id            uuid primary key default gen_random_uuid(),
   institute_id  uuid references institutes(id) on delete cascade, -- null = all
   message       text not null,
@@ -10,25 +11,21 @@ create table if not exists announcements (
   active        boolean not null default true,
   created_at    timestamptz not null default now()
 );
-create index if not exists announcements_active_idx
+create index announcements_active_idx
   on announcements (institute_id) where active;
 
-create table if not exists announcement_dismissals (
+create table announcement_dismissals (
   announcement_id uuid not null references announcements(id) on delete cascade,
   institute_id    uuid not null references institutes(id) on delete cascade,
   created_at      timestamptz not null default now(),
   primary key (announcement_id, institute_id)
 );
 
--- Locked to clients; only the service role (super admin actions) and the
--- SECURITY DEFINER RPCs below touch these tables.
 alter table announcements          enable row level security;
 alter table announcement_dismissals enable row level security;
 
 alter table institutes add column if not exists grace_until timestamptz;
 
--- Active announcements for the caller's institute (or global), excluding
--- 'once' ones this institute already dismissed.
 create or replace function get_active_announcements()
 returns jsonb
 language plpgsql

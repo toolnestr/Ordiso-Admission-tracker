@@ -76,7 +76,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ session?: string }>;
 }) {
-  await getPortalContext(); // gates access + redirects if signed out
+  const ctx = await getPortalContext(); // gates access + redirects if signed out
   const { session: sessionParam } = await searchParams;
   const supabase = await createClient();
 
@@ -121,6 +121,15 @@ export default async function ReportsPage({
   const current = summarize(curRows ?? [], selected);
   const prior = previous ? summarize(prevRows ?? [], previous) : null;
 
+  // Detailed rows for the PDF reports (names, program, reasons, dates).
+  const { data: detailRows } = await supabase
+    .from("applicants")
+    .select(
+      "application_id, form_data, status, source, created_at, confirmed_at, confirmation_reason, rejection_reason, programs(name)",
+    )
+    .eq("session_id", selected.id)
+    .order("created_at", { ascending: true });
+
   return (
     <div>
       <Header />
@@ -131,6 +140,8 @@ export default async function ReportsPage({
         current={current}
         prior={prior}
         pipeline={PIPELINE}
+        instituteName={ctx.institute.display_name}
+        rows={(detailRows ?? []) as never[]}
       />
     </div>
   );

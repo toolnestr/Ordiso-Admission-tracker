@@ -27,6 +27,8 @@ export default function StatusControl({
 }) {
   const [pending, start] = useTransition();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showReject, setShowReject] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const [state, action, confirming] = useActionState(manualConfirm, initial);
 
   const isConfirmed = status.startsWith("Confirmed");
@@ -70,7 +72,11 @@ export default function StatusControl({
           <button
             key={s}
             disabled={!canEdit || pending || s === status}
-            onClick={() => start(() => updateStatus(applicantId, s))}
+            onClick={() =>
+              s === "Rejected"
+                ? setShowReject((v) => !v)
+                : start(() => updateStatus(applicantId, s))
+            }
             className={`rounded-lg border px-2.5 py-1.5 text-[12.5px] font-medium transition-colors disabled:cursor-not-allowed ${
               s === status
                 ? "border-accent bg-accent-soft text-accent"
@@ -81,6 +87,41 @@ export default function StatusControl({
           </button>
         ))}
       </div>
+
+      {showReject && canEdit && (
+        <div className="mt-3 border-t border-border pt-3">
+          <span className="text-[12.5px] text-muted-strong">
+            Reason for rejection (optional — appears on the rejection report)
+          </span>
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={2}
+            placeholder="e.g. Did not meet the minimum eligibility criteria."
+            className="surface-2 mt-1.5 block w-full rounded-lg px-3 py-2 text-[13.5px] outline-none focus:border-border-strong"
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() =>
+                start(() => {
+                  updateStatus(applicantId, "Rejected", rejectReason);
+                  setShowReject(false);
+                })
+              }
+              disabled={pending}
+              className="rounded-lg bg-red-500/90 px-3.5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {pending ? "Rejecting…" : "Reject applicant"}
+            </button>
+            <button
+              onClick={() => setShowReject(false)}
+              className="surface-2 rounded-lg px-3.5 py-2 text-[13px] font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Manual confirm — Admin only, reason mandatory (Section 2.4) */}
       {role === "Admin" && status === "Admitted" && (

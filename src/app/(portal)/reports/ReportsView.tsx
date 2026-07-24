@@ -9,6 +9,7 @@ import Funnel from "@/components/charts/Funnel";
 import AreaChart from "@/components/charts/AreaChart";
 import { stageColor, sourceColor } from "@/components/charts/palette";
 import ScreenshotButton from "@/components/portal/ScreenshotButton";
+import ReportPdf, { type ReportRow } from "./ReportPdf";
 import type { SessionMeta, Totals } from "./page";
 
 function fmtDay(iso: string) {
@@ -25,6 +26,8 @@ export default function ReportsView({
   current,
   prior,
   pipeline,
+  instituteName,
+  rows,
 }: {
   sessions: SessionMeta[];
   selected: SessionMeta;
@@ -32,6 +35,8 @@ export default function ReportsView({
   current: Totals;
   prior: Totals | null;
   pipeline: string[];
+  instituteName: string;
+  rows: ReportRow[];
 }) {
   const router = useRouter();
   const [view, setView] = useState<"chart" | "table">("chart");
@@ -127,6 +132,12 @@ export default function ReportsView({
         </div>
 
         <div className="ml-auto flex items-center gap-2">
+          <ReportPdf
+            instituteName={instituteName}
+            session={selected}
+            totals={current}
+            rows={rows}
+          />
           <ScreenshotButton targetId="reports-capture" filePrefix="ordiso-report" />
           <button
             onClick={exportCsv}

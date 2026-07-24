@@ -31,7 +31,11 @@ function refresh(id: string) {
  * Move an applicant to any pipeline stage. Stages are intentionally skippable
  * (Section 2.13) — a walk-in who pays on the spot can jump Applied -> Admitted.
  */
-export async function updateStatus(applicantId: string, status: string) {
+export async function updateStatus(
+  applicantId: string,
+  status: string,
+  reason?: string,
+) {
   const ctx = await getPortalContext();
   if (ctx.role === "Viewer") return;
   if (!PIPELINE.includes(status as (typeof PIPELINE)[number])) return;
@@ -47,9 +51,13 @@ export async function updateStatus(applicantId: string, status: string) {
     .eq("id", applicantId)
     .single();
 
+  // Record (or clear) the rejection reason so the rejection report can show it.
+  const patch: Record<string, unknown> = { status };
+  if (status === "Rejected") patch.rejection_reason = reason?.trim() || null;
+
   const { error } = await supabase
     .from("applicants")
-    .update({ status })
+    .update(patch)
     .eq("id", applicantId);
   if (error) return;
 
