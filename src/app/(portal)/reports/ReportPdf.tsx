@@ -16,6 +16,16 @@ export type ReportRow = {
   programs: { name: string } | { name: string }[] | null;
 };
 
+export type FollowUpReportRow = {
+  name: string;
+  familyLabel: string | null;
+  contact: string;
+  dueDate: string;
+  status: string;
+  remark: string | null;
+  staffName: string | null;
+};
+
 function nameOf(r: ReportRow) {
   const fd = r.form_data;
   if (fd) {
@@ -43,8 +53,18 @@ const REPORTS = [
   { key: "audit", label: "Session audit" },
   { key: "admitted", label: "Admitted & confirmed" },
   { key: "rejected", label: "Rejections (with reasons)" },
+  { key: "followups", label: "Follow-ups (with remarks)" },
   { key: "all", label: "All applicants" },
 ] as const;
+
+function fmtYmd(ymd: string) {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 type ReportKey = (typeof REPORTS)[number]["key"];
 
@@ -58,11 +78,13 @@ export default function ReportPdf({
   session,
   totals,
   rows,
+  followUps = [],
 }: {
   instituteName: string;
   session: SessionMeta;
   totals: Totals;
   rows: ReportRow[];
+  followUps?: FollowUpReportRow[];
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -170,6 +192,30 @@ export default function ReportPdf({
             r.rejection_reason || "—",
             d(r.created_at),
           ]),
+        });
+      } else if (kind === "followups") {
+        const list = [...followUps].sort(
+          (a, b) =>
+            a.dueDate.localeCompare(b.dueDate) ||
+            (a.familyLabel || a.name).localeCompare(b.familyLabel || b.name),
+        );
+        autoTable(doc, {
+          ...opts,
+          columnStyles: { 6: { cellWidth: 42 } },
+          head: [
+            ["#", "Student", "Family", "Contact", "Due", "Status", "Remark"],
+          ],
+          body: list.length
+            ? list.map((r, i) => [
+                String(i + 1),
+                r.name,
+                r.familyLabel || "—",
+                r.contact || "—",
+                fmtYmd(r.dueDate),
+                r.status,
+                r.remark || "—",
+              ])
+            : [["—", "No follow-ups in this session", "", "", "", "", ""]],
         });
       } else {
         autoTable(doc, {
