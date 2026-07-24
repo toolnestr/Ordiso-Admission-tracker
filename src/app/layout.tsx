@@ -13,9 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://admission.toolnestr.com"),
   title: "Ordiso — Free Admission Management for Institutes",
   description:
     "Manage applications, track admissions, and confirm enrollments in one place. Free for institutes — no setup fees, no hidden costs.",
+  // App/utility pages (auth, portal, admin, per-institute apply forms) are
+  // near-duplicate and thin — none should be indexed. Default everything to
+  // noindex here; the marketing landing page (src/app/page.tsx) opts back in.
+  robots: { index: false, follow: true },
 };
 
 export default function RootLayout({
