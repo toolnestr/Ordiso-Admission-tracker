@@ -25,6 +25,7 @@ function refresh(id: string) {
   revalidatePath(`/applicants/${id}`);
   revalidatePath("/applicants");
   revalidatePath("/dashboard");
+  revalidatePath("/follow-ups");
 }
 
 /**
@@ -584,6 +585,108 @@ export async function deleteNote(noteId: string, applicantId: string) {
     staffId: ctx.staffId,
     actionType: "note_deleted",
     description: "A note was deleted",
+  });
+
+  refresh(applicantId);
+}
+
+/**
+ * Schedule a follow-up (due date + optional remark) for an applicant. Unlike a
+ * note, a follow-up has a date and a Pending/Done state so it can surface on
+ * the dashboard and in the daily/monthly follow-up reports.
+ */
+export async function addFollowUp(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const ctx = await getPortalContext();
+  if (ctx.role === "Viewer") return { error: "You don't have permission." };
+
+  const applicantId = String(formData.get("applicant_id") || "");
+  const dueDate = String(formData.get("due_date") || "").trim();
+  const remark = String(formData.get("remark") || "").trim();
+  // A date input yields YYYY-MM-DD; guard against empty/garbage.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    return { error: "Pick a valid follow-up date." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("follow_ups").insert({
+    applicant_id: applicantId,
+    staff_id: ctx.staffId,
+    due_date: dueDate,
+    remark: remark || null,
+  });
+  if (error) return { error: "Could not schedule the follow-up." };
+
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId,
+    staffId: ctx.staffId,
+    actionType: "follow_up_scheduled",
+    description: `Follow-up scheduled for ${dueDate}`,
+  });
+
+  refresh(applicantId);
+  return { error: null };
+}
+
+/** Mark a follow-up Done (optionally appending an outcome to the remark). */
+export async function resolveFollowUp(
+  followUpId: string,
+  applicantId: string,
+  outcome?: string,
+) {
+  const ctx = await getPortalContext();
+  if (ctx.role === "Viewer") return;
+
+  const supabase = await createClient();
+  const trimmed = outcome?.trim();
+  if (trimmed) {
+    const { data: existing } = await supabase
+      .from("follow_ups")
+      .select("remark")
+      .eq("id", followUpId)
+      .single();
+    const merged = existing?.remark
+      ? `${existing.remark}\nOutcome: ${trimmed}`
+      : `Outcome: ${trimmed}`;
+    await supabase
+      .from("follow_ups")
+      .update({ status: "Done", resolved_at: new Date().toISOString(), remark: merged })
+      .eq("id", followUpId);
+  } else {
+    await supabase
+      .from("follow_ups")
+      .update({ status: "Done", resolved_at: new Date().toISOString() })
+      .eq("id", followUpId);
+  }
+
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId,
+    staffId: ctx.staffId,
+    actionType: "follow_up_resolved",
+    description: "Follow-up marked done",
+  });
+
+  refresh(applicantId);
+}
+
+/** Delete a follow-up entered in error. */
+export async function deleteFollowUp(followUpId: string, applicantId: string) {
+  const ctx = await getPortalContext();
+  if (ctx.role === "Viewer") return;
+
+  const supabase = await createClient();
+  await supabase.from("follow_ups").delete().eq("id", followUpId);
+
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId,
+    staffId: ctx.staffId,
+    actionType: "follow_up_deleted",
+    description: "A follow-up was deleted",
   });
 
   refresh(applicantId);

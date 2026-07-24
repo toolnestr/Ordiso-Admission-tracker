@@ -8,6 +8,7 @@ import {
   Users,
   FileText,
   CalendarRange,
+  CalendarClock,
   QrCode,
   UsersRound,
   BarChart3,
@@ -29,6 +30,7 @@ export type NavItem = {
 export const nav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/applicants", label: "Applicants", icon: Users },
+  { href: "/follow-ups", label: "Follow-ups", icon: CalendarClock },
   {
     href: "/form-builder",
     label: "Form Builder",
