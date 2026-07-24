@@ -12,6 +12,7 @@ import {
   FileUp,
   FileText,
   Download,
+  CalendarClock,
 } from "lucide-react";
 import {
   addFee,
@@ -25,6 +26,9 @@ import {
   addNote,
   deleteNote,
   addCommunication,
+  addFollowUp,
+  resolveFollowUp,
+  deleteFollowUp,
   type ActionState,
 } from "./actions";
 import Select from "@/components/ui/Select";
@@ -67,12 +71,22 @@ type Activity = {
   created_at: string;
   staff: { name: string } | null;
 };
+type FollowUp = {
+  id: string;
+  due_date: string;
+  remark: string | null;
+  status: string;
+  resolved_at: string | null;
+  created_at: string;
+  staff: { name: string } | null;
+};
 
 const initial: ActionState = { error: null };
 
 const TABS = [
   "Form Data",
   "Fees",
+  "Follow-ups",
   "Notes",
   "Status",
   "Documents",
@@ -87,6 +101,16 @@ function when(iso: string) {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+  });
+}
+
+/** Render a bare 'YYYY-MM-DD' date without timezone drift. */
+function fmtDate(ymd: string) {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
   });
 }
 
@@ -105,9 +129,13 @@ export default function DetailTabs(props: {
   notes: Note[];
   comms: Comm[];
   activity: Activity[];
+  followUps: FollowUp[];
   staffId: string;
 }) {
   const [tab, setTab] = useState<Tab>("Form Data");
+  const pendingFollowUps = props.followUps.filter(
+    (f) => f.status !== "Done",
+  ).length;
 
   return (
     <div>
@@ -128,6 +156,11 @@ export default function DetailTabs(props: {
                 {props.fees.length}
               </span>
             )}
+            {t === "Follow-ups" && pendingFollowUps > 0 && (
+              <span className="ml-1.5 rounded-full bg-amber-500/15 px-1.5 text-[11px] text-amber-300">
+                {pendingFollowUps}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -135,6 +168,13 @@ export default function DetailTabs(props: {
       <div className="py-6">
         {tab === "Form Data" && <FormDataTab data={props.formData} />}
         {tab === "Fees" && <FeesTab {...props} />}
+        {tab === "Follow-ups" && (
+          <FollowUpsTab
+            applicantId={props.applicantId}
+            followUps={props.followUps}
+            role={props.role}
+          />
+        )}
         {tab === "Notes" && <NotesTab {...props} />}
         {tab === "Status" && <StatusTab {...props} />}
         {tab === "Documents" && (
@@ -676,6 +716,135 @@ function NotesTab({
             </div>
           </div>
         ))
+      )}
+    </div>
+  );
+}
+
+function FollowUpsTab({
+  applicantId,
+  followUps,
+  role,
+}: {
+  applicantId: string;
+  followUps: FollowUp[];
+  role: StaffRole;
+}) {
+  const [state, action, pending] = useActionState(addFollowUp, initial);
+  const [busy, startBusy] = useTransition();
+  const canEdit = role !== "Viewer";
+  // Local 'today' for the overdue hint in this tab. The dashboard/list use the
+  // institute timezone as the authority; here it's just a visual cue.
+  const todayYmd = new Date().toLocaleDateString("en-CA");
+
+  return (
+    <div className="space-y-4">
+      {canEdit && (
+        <form action={action} className="card-sheen space-y-3 rounded-xl p-4">
+          <input type="hidden" name="applicant_id" value={applicantId} />
+          <div className="grid gap-3 sm:grid-cols-[190px_1fr]">
+            <label className="block">
+              <span className="mb-1.5 block text-[13px] font-medium text-muted-strong">
+                Follow-up date <span className="text-accent">*</span>
+              </span>
+              <input
+                type="date"
+                name="due_date"
+                required
+                defaultValue={todayYmd}
+                className="surface-2 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-[13px] font-medium text-muted-strong">
+                Remark{" "}
+                <span className="font-normal text-muted">(optional)</span>
+              </span>
+              <input
+                name="remark"
+                placeholder="e.g. Call parent about the fee deadline"
+                className="surface-2 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
+              />
+            </label>
+          </div>
+          {state.error && <ErrorNote text={state.error} />}
+          <button
+            type="submit"
+            disabled={pending}
+            className="rounded-lg bg-foreground px-4 py-2 text-[13px] font-medium text-background disabled:opacity-50"
+          >
+            {pending ? "Saving…" : "Schedule follow-up"}
+          </button>
+        </form>
+      )}
+
+      {followUps.length === 0 ? (
+        <Empty text="No follow-ups scheduled." />
+      ) : (
+        followUps.map((f) => {
+          const done = f.status === "Done";
+          const overdue = !done && f.due_date < todayYmd;
+          return (
+            <div key={f.id} className="surface rounded-xl p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CalendarClock
+                      className="h-4 w-4 text-muted"
+                      strokeWidth={1.7}
+                    />
+                    <span className="text-[13.5px] font-medium">
+                      {fmtDate(f.due_date)}
+                    </span>
+                    {done ? (
+                      <span className="badge badge-green">Done</span>
+                    ) : overdue ? (
+                      <span className="badge badge-red">Overdue</span>
+                    ) : (
+                      <span className="badge badge-amber">Pending</span>
+                    )}
+                  </div>
+                  {f.remark && (
+                    <p className="mt-2 whitespace-pre-wrap text-[13.5px]">
+                      {f.remark}
+                    </p>
+                  )}
+                  <div className="mt-2 text-[12px] text-muted">
+                    {f.staff?.name ?? "Unknown"}
+                    {done && f.resolved_at
+                      ? ` · done ${when(f.resolved_at)}`
+                      : ""}
+                  </div>
+                </div>
+                {canEdit && (
+                  <div className="flex shrink-0 items-center gap-1">
+                    {!done && (
+                      <button
+                        onClick={() =>
+                          startBusy(() => resolveFollowUp(f.id, applicantId))
+                        }
+                        disabled={busy}
+                        className="rounded-md px-2 py-1 text-[12px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:opacity-40"
+                      >
+                        Mark done
+                      </button>
+                    )}
+                    <button
+                      onClick={() =>
+                        startBusy(() => deleteFollowUp(f.id, applicantId))
+                      }
+                      disabled={busy}
+                      aria-label="Delete follow-up"
+                      className="rounded-md p-1 text-muted transition-colors hover:text-red-400 disabled:opacity-40"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })
       )}
     </div>
   );

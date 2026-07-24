@@ -89,8 +89,13 @@ export default async function ApplicantDetailPage({
       .filter((s) => s.fees.length > 0);
   }
 
-  const [{ data: fees }, { data: notes }, { data: comms }, { data: activity }] =
-    await Promise.all([
+  const [
+    { data: fees },
+    { data: notes },
+    { data: comms },
+    { data: activity },
+    { data: followUps },
+  ] = await Promise.all([
       supabase
         .from("applicant_fees")
         .select(
@@ -112,6 +117,11 @@ export default async function ApplicantDetailPage({
         .select("id, action_type, description, reason, created_at, staff(name)")
         .eq("applicant_id", id)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("follow_ups")
+        .select("id, due_date, remark, status, resolved_at, created_at, staff(name)")
+        .eq("applicant_id", id)
+        .order("due_date", { ascending: false }),
     ]);
 
   // Documents (Premium): fetch rows, then mint short-lived signed URLs from the
@@ -299,6 +309,7 @@ export default async function ApplicantDetailPage({
           notes={(notes ?? []) as never[]}
           comms={(comms ?? []) as never[]}
           activity={(activity ?? []) as never[]}
+          followUps={(followUps ?? []) as never[]}
           staffId={ctx.staffId}
         />
       </div>

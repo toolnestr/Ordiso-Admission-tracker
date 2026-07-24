@@ -1,7 +1,21 @@
 import Link from "next/link";
-import { ArrowRight, CalendarPlus, Share2, TrendingUp, TrendingDown } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarPlus,
+  Share2,
+  TrendingUp,
+  TrendingDown,
+  CalendarClock,
+  AlertTriangle,
+  CalendarRange,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext, FREE_TIER_CAP } from "@/lib/portal";
+import {
+  ymdInTz,
+  fetchSessionFollowUps,
+  bucketFollowUps,
+} from "@/lib/followups";
 import Funnel from "@/components/charts/Funnel";
 import Donut from "@/components/charts/Donut";
 import AreaChart from "@/components/charts/AreaChart";
@@ -96,6 +110,18 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false })
     .limit(5);
 
+  // Follow-up tracking (current-session scope). "Today" is resolved in the
+  // institute's timezone so the daily/monthly buckets don't drift across the
+  // UTC date boundary. Timezone isn't on ctx, so read it here.
+  const { data: inst } = await supabase
+    .from("institutes")
+    .select("timezone")
+    .eq("id", ctx.institute.id)
+    .maybeSingle();
+  const todayYmd = ymdInTz(new Date(), inst?.timezone ?? "UTC");
+  const followRows = await fetchSessionFollowUps(supabase, ctx.session.id);
+  const followUps = bucketFollowUps(followRows, todayYmd);
+
   // Dense day series across the session window.
   const dayMap: Record<string, number> = {};
   for (const r of rows ?? []) dayMap[r.created_at.slice(0, 10)] = (dayMap[r.created_at.slice(0, 10)] ?? 0) + 1;
@@ -154,6 +180,42 @@ export default async function DashboardPage() {
         <Stat label="Admitted" value={cur.admitted} prior={prev?.admitted} />
         <Stat label="Confirmed" value={cur.confirmed} prior={prev?.confirmed} />
       </div>
+
+      {/* Follow-up tracking — click a tile to see the applicants behind it. */}
+      {cur.total > 0 && (
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <FollowTile
+            href="/follow-ups?tab=today"
+            icon={<CalendarClock className="h-4 w-4" strokeWidth={1.8} />}
+            label="Follow up today"
+            value={followUps.todayRemaining}
+            hint={
+              followUps.todayTotal > 0
+                ? `${followUps.todayRemaining} of ${followUps.todayTotal} remaining`
+                : "Nothing due today"
+            }
+            tone="accent"
+          />
+          <FollowTile
+            href="/follow-ups?tab=overdue"
+            icon={<AlertTriangle className="h-4 w-4" strokeWidth={1.8} />}
+            label="Overdue"
+            value={followUps.overdue}
+            hint={
+              followUps.overdue > 0 ? "From previous dates" : "All caught up"
+            }
+            tone={followUps.overdue > 0 ? "red" : "muted"}
+          />
+          <FollowTile
+            href="/follow-ups?tab=month"
+            icon={<CalendarRange className="h-4 w-4" strokeWidth={1.8} />}
+            label="Pending this month"
+            value={followUps.monthPending}
+            hint="Up to today"
+            tone="amber"
+          />
+        </div>
+      )}
 
       {cur.total === 0 ? (
         <EmptyState hasSession />
@@ -316,6 +378,47 @@ function Stat({ label, value, prior }: { label: string; value: number; prior?: n
         )}
       </div>
     </div>
+  );
+}
+
+function FollowTile({
+  href,
+  icon,
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  hint: string;
+  tone: "accent" | "amber" | "red" | "muted";
+}) {
+  const toneCls =
+    tone === "red"
+      ? "text-red-400"
+      : tone === "amber"
+        ? "text-amber-300"
+        : tone === "accent"
+          ? "text-accent"
+          : "text-muted";
+  return (
+    <Link
+      href={href}
+      className="card-sheen group flex items-center justify-between rounded-xl p-4 transition-colors hover:border-border-strong"
+    >
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 text-[12px] text-muted">
+          <span className={toneCls}>{icon}</span>
+          {label}
+        </div>
+        <div className="mt-1.5 text-2xl font-semibold tabular-nums">{value}</div>
+        <div className="mt-0.5 text-[11.5px] text-muted">{hint}</div>
+      </div>
+      <ArrowRight className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
+    </Link>
   );
 }
 
