@@ -52,7 +52,7 @@ export default async function ApplicantsPage() {
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-[12.5px] font-medium uppercase tracking-[0.18em] text-accent">
             Applicants
@@ -74,7 +74,7 @@ export default async function ApplicantsPage() {
           )}
           <Link
             href="/share"
-            className="surface-2 inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-[13px] font-medium transition-colors hover:bg-[var(--border)]"
+            className="surface-2 inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors hover:bg-[var(--border)] sm:px-3.5 sm:py-2 sm:text-[13px]"
           >
             <Share2 className="h-4 w-4" strokeWidth={1.8} />
             Share form

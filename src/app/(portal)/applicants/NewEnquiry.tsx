@@ -143,7 +143,7 @@ export default function NewEnquiry({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3.5 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90"
+        className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3 py-1.5 text-[12.5px] font-medium text-background transition-opacity hover:opacity-90 sm:px-3.5 sm:py-2 sm:text-[13px]"
       >
         <Plus className="h-4 w-4" strokeWidth={2} />
         New enquiry

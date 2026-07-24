@@ -56,7 +56,7 @@ export default function Nav() {
           </a>
           <a
             href="/login"
-            className="hidden rounded-lg px-3.5 py-2 text-[13px] font-medium text-muted-strong transition-colors hover:text-foreground sm:block"
+            className="whitespace-nowrap rounded-lg px-2.5 py-2 text-[13px] font-medium text-muted-strong transition-colors hover:text-foreground sm:px-3.5"
           >
             Login
           </a>

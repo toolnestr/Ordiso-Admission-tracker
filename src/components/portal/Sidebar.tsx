@@ -55,7 +55,7 @@ function NavPending() {
   const { pending } = useLinkStatus();
   if (!pending) return null;
   return (
-    <Loader2 className="ml-auto h-3.5 w-3.5 animate-spin text-accent" />
+    <Loader2 className="ml-auto h-3.5 w-3.5 animate-spin text-foreground" />
   );
 }
 
