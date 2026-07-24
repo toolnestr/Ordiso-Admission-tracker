@@ -135,16 +135,21 @@ export async function removeStaff(staffId: string) {
   if (staffId === ctx.staffId) return; // can't remove yourself
 
   const service = createServiceClient();
+  // Scope by institute: the service role bypasses RLS, so we MUST verify the
+  // target staff belongs to the caller's institute before touching it.
   const { data: staff } = await service
     .from("staff")
     .select("name, email, auth_user_id")
     .eq("id", staffId)
-    .single();
+    .eq("institute_id", ctx.institute.id)
+    .maybeSingle();
+  if (!staff) return;
 
   await service
     .from("staff")
     .update({ status: "Removed", auth_user_id: null })
-    .eq("id", staffId);
+    .eq("id", staffId)
+    .eq("institute_id", ctx.institute.id);
 
   // Kill their login entirely.
   if (staff?.auth_user_id) {
@@ -167,15 +172,21 @@ export async function revokeInvite(staffId: string) {
   if (ctx.role !== "Admin") return;
 
   const service = createServiceClient();
+  // Service role bypasses RLS — scope the lookup to the caller's institute.
   const { data: staff } = await service
     .from("staff")
     .select("name, status")
     .eq("id", staffId)
-    .single();
-  if (staff?.status !== "Invited") return;
+    .eq("institute_id", ctx.institute.id)
+    .maybeSingle();
+  if (!staff || staff.status !== "Invited") return;
 
   await service.from("invite_tokens").delete().eq("staff_id", staffId);
-  await service.from("staff").delete().eq("id", staffId);
+  await service
+    .from("staff")
+    .delete()
+    .eq("id", staffId)
+    .eq("institute_id", ctx.institute.id);
 
   await logActivity({
     instituteId: ctx.institute.id,
@@ -195,6 +206,19 @@ export async function resendInvite(
   if (ctx.role !== "Admin") return null;
 
   const service = createServiceClient();
+  // Service role bypasses RLS — verify the target is a still-pending invite in
+  // the caller's own institute before minting a fresh token for it. Without
+  // this, an Admin could re-issue an invite link for another tenant's staff
+  // slot and take over that account via /invite/[token].
+  const { data: staff } = await service
+    .from("staff")
+    .select("id")
+    .eq("id", staffId)
+    .eq("institute_id", ctx.institute.id)
+    .eq("status", "Invited")
+    .maybeSingle();
+  if (!staff) return null;
+
   const token = randomBytes(24).toString("hex");
   const expires = new Date();
   expires.setDate(expires.getDate() + 7);
