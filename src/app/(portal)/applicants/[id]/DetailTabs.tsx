@@ -32,6 +32,7 @@ import {
   type ActionState,
 } from "./actions";
 import Select from "@/components/ui/Select";
+import DatePicker from "@/components/ui/DatePicker";
 import type { StaffRole } from "@/lib/portal";
 
 type Fee = {
@@ -79,6 +80,8 @@ type FollowUp = {
   resolved_at: string | null;
   created_at: string;
   staff: { name: string } | null;
+  applicant_id: string;
+  applicantName?: string;
 };
 
 const initial: ActionState = { error: null };
@@ -130,6 +133,7 @@ export default function DetailTabs(props: {
   comms: Comm[];
   activity: Activity[];
   followUps: FollowUp[];
+  familyLabel: string | null;
   staffId: string;
 }) {
   const [tab, setTab] = useState<Tab>("Form Data");
@@ -173,6 +177,7 @@ export default function DetailTabs(props: {
             applicantId={props.applicantId}
             followUps={props.followUps}
             role={props.role}
+            familyLabel={props.familyLabel}
           />
         )}
         {tab === "Notes" && <NotesTab {...props} />}
@@ -725,10 +730,12 @@ function FollowUpsTab({
   applicantId,
   followUps,
   role,
+  familyLabel,
 }: {
   applicantId: string;
   followUps: FollowUp[];
   role: StaffRole;
+  familyLabel: string | null;
 }) {
   const [state, action, pending] = useActionState(addFollowUp, initial);
   const [busy, startBusy] = useTransition();
@@ -736,25 +743,36 @@ function FollowUpsTab({
   // Local 'today' for the overdue hint in this tab. The dashboard/list use the
   // institute timezone as the authority; here it's just a visual cue.
   const todayYmd = new Date().toLocaleDateString("en-CA");
+  const [date, setDate] = useState(todayYmd);
 
   return (
     <div className="space-y-4">
+      {familyLabel && (
+        <div className="flex items-start gap-2 rounded-lg border border-accent-soft bg-accent-soft px-3 py-2.5 text-[12.5px] text-accent">
+          <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.7} />
+          <span>
+            Siblings in {familyLabel === "this" ? "this family" : `the ${familyLabel} family`}{" "}
+            share one contact — follow-ups here cover the whole family, so you
+            only call the parent once.
+          </span>
+        </div>
+      )}
+
       {canEdit && (
         <form action={action} className="card-sheen space-y-3 rounded-xl p-4">
           <input type="hidden" name="applicant_id" value={applicantId} />
-          <div className="grid gap-3 sm:grid-cols-[190px_1fr]">
-            <label className="block">
+          <div className="grid gap-3 sm:grid-cols-[200px_1fr]">
+            <div className="block">
               <span className="mb-1.5 block text-[13px] font-medium text-muted-strong">
                 Follow-up date <span className="text-accent">*</span>
               </span>
-              <input
-                type="date"
+              <DatePicker
                 name="due_date"
+                value={date}
+                onChange={setDate}
                 required
-                defaultValue={todayYmd}
-                className="surface-2 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
               />
-            </label>
+            </div>
             <label className="block">
               <span className="mb-1.5 block text-[13px] font-medium text-muted-strong">
                 Remark{" "}
@@ -784,6 +802,8 @@ function FollowUpsTab({
         followUps.map((f) => {
           const done = f.status === "Done";
           const overdue = !done && f.due_date < todayYmd;
+          // In a family, show which sibling the follow-up was logged on.
+          const forOther = familyLabel && f.applicant_id !== applicantId;
           return (
             <div key={f.id} className="surface rounded-xl p-4">
               <div className="flex items-start justify-between gap-3">
@@ -803,6 +823,11 @@ function FollowUpsTab({
                     ) : (
                       <span className="badge badge-amber">Pending</span>
                     )}
+                    {forOther && f.applicantName && (
+                      <span className="text-[11.5px] text-muted">
+                        · logged on {f.applicantName}
+                      </span>
+                    )}
                   </div>
                   {f.remark && (
                     <p className="mt-2 whitespace-pre-wrap text-[13.5px]">
@@ -821,7 +846,9 @@ function FollowUpsTab({
                     {!done && (
                       <button
                         onClick={() =>
-                          startBusy(() => resolveFollowUp(f.id, applicantId))
+                          startBusy(() =>
+                            resolveFollowUp(f.id, f.applicant_id),
+                          )
                         }
                         disabled={busy}
                         className="rounded-md px-2 py-1 text-[12px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:opacity-40"
@@ -831,7 +858,7 @@ function FollowUpsTab({
                     )}
                     <button
                       onClick={() =>
-                        startBusy(() => deleteFollowUp(f.id, applicantId))
+                        startBusy(() => deleteFollowUp(f.id, f.applicant_id))
                       }
                       disabled={busy}
                       aria-label="Delete follow-up"

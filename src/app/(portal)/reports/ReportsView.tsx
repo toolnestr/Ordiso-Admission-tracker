@@ -9,7 +9,7 @@ import Funnel from "@/components/charts/Funnel";
 import AreaChart from "@/components/charts/AreaChart";
 import { stageColor, sourceColor } from "@/components/charts/palette";
 import ScreenshotButton from "@/components/portal/ScreenshotButton";
-import ReportPdf, { type ReportRow } from "./ReportPdf";
+import ReportPdf, { type ReportRow, type FollowUpReportRow } from "./ReportPdf";
 import type { SessionMeta, Totals } from "./page";
 
 function fmtDay(iso: string) {
@@ -28,6 +28,7 @@ export default function ReportsView({
   pipeline,
   instituteName,
   rows,
+  followUps,
 }: {
   sessions: SessionMeta[];
   selected: SessionMeta;
@@ -37,8 +38,15 @@ export default function ReportsView({
   pipeline: string[];
   instituteName: string;
   rows: ReportRow[];
+  followUps: FollowUpReportRow[];
 }) {
   const router = useRouter();
+
+  const followSummary = {
+    total: followUps.length,
+    pending: followUps.filter((f) => f.status !== "Done").length,
+    done: followUps.filter((f) => f.status === "Done").length,
+  };
   const [view, setView] = useState<"chart" | "table">("chart");
   const [timeMode, setTimeMode] = useState<"daily" | "cumulative">("daily");
 
@@ -137,6 +145,7 @@ export default function ReportsView({
             session={selected}
             totals={current}
             rows={rows}
+            followUps={followUps}
           />
           <ScreenshotButton targetId="reports-capture" filePrefix="ordiso-report" />
           <button
@@ -162,6 +171,15 @@ export default function ReportsView({
           suffix="%"
         />
       </div>
+
+      {/* Follow-up summary for this session */}
+      {followSummary.total > 0 && (
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <Stat label="Follow-ups scheduled" value={followSummary.total} />
+          <Stat label="Pending" value={followSummary.pending} />
+          <Stat label="Completed" value={followSummary.done} />
+        </div>
+      )}
 
       {current.total === 0 ? (
         <div className="card-sheen mt-4 rounded-2xl px-6 py-16 text-center">

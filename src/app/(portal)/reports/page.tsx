@@ -1,6 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
+import { fetchSessionFollowUps } from "@/lib/followups";
 import ReportsView from "./ReportsView";
+import type { FollowUpReportRow } from "./ReportPdf";
+
+function displayName(form_data: Record<string, unknown> | null, fallback: string) {
+  if (form_data) {
+    for (const [k, v] of Object.entries(form_data)) {
+      if (/name/i.test(k) && typeof v === "string" && v.trim()) return v.trim();
+    }
+  }
+  return fallback;
+}
 
 export type SessionMeta = {
   id: string;
@@ -130,6 +141,18 @@ export default async function ReportsPage({
     .eq("session_id", selected.id)
     .order("created_at", { ascending: true });
 
+  // Follow-ups for this session, for the Follow-ups PDF report + summary.
+  const followRows = await fetchSessionFollowUps(supabase, selected.id);
+  const followUps: FollowUpReportRow[] = followRows.map((r) => ({
+    name: displayName(r.applicants.form_data, r.applicants.application_id),
+    familyLabel: r.applicants.family_label,
+    contact: r.applicants.phone || r.applicants.email || "",
+    dueDate: r.due_date,
+    status: r.status,
+    remark: r.remark,
+    staffName: r.staff?.name ?? null,
+  }));
+
   return (
     <div>
       <Header />
@@ -142,6 +165,7 @@ export default async function ReportsPage({
         pipeline={PIPELINE}
         instituteName={ctx.institute.display_name}
         rows={(detailRows ?? []) as never[]}
+        followUps={followUps}
       />
     </div>
   );

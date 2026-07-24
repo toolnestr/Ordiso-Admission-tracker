@@ -119,8 +119,17 @@ export default async function ApplicantDetailPage({
         .order("created_at", { ascending: false }),
       supabase
         .from("follow_ups")
-        .select("id, due_date, remark, status, resolved_at, created_at, staff(name)")
-        .eq("applicant_id", id)
+        .select(
+          "id, due_date, remark, status, resolved_at, created_at, applicant_id, staff(name)",
+        )
+        // Family members share a parent/contact, so a follow-up on any sibling
+        // shows on every sibling's tab — you don't call the same parent twice.
+        .in(
+          "applicant_id",
+          applicant.family_id && siblings
+            ? [applicant.id, ...siblings.map((s) => s.id)]
+            : [applicant.id],
+        )
         .order("due_date", { ascending: false }),
     ]);
 
@@ -155,6 +164,19 @@ export default async function ApplicantDetailPage({
 
   const form_data = (applicant.form_data ?? {}) as Record<string, unknown>;
   const name = displayName(form_data, applicant.email || "Unknown");
+
+  // Which student each follow-up was logged on, so a family view can label them.
+  const nameById: Record<string, string> = { [applicant.id]: name };
+  for (const s of siblings ?? []) {
+    nameById[s.id] = displayName(
+      (s.form_data ?? {}) as Record<string, unknown>,
+      s.application_id,
+    );
+  }
+  const followUpsWithNames = (followUps ?? []).map((f) => ({
+    ...f,
+    applicantName: nameById[(f as { applicant_id: string }).applicant_id] ?? "Student",
+  }));
   const program = Array.isArray(applicant.programs)
     ? applicant.programs[0]
     : applicant.programs;
@@ -309,7 +331,12 @@ export default async function ApplicantDetailPage({
           notes={(notes ?? []) as never[]}
           comms={(comms ?? []) as never[]}
           activity={(activity ?? []) as never[]}
-          followUps={(followUps ?? []) as never[]}
+          followUps={followUpsWithNames as never[]}
+          familyLabel={
+            applicant.family_id
+              ? applicant.family_label || "this"
+              : null
+          }
           staffId={ctx.staffId}
         />
       </div>
