@@ -8,8 +8,10 @@ import { sendApplicantEmail, statusEmailKind } from "@/lib/email";
 
 export type ActionState = { error: string | null };
 
-/** Documents cap: a single file must be 5 MB or smaller (also set on the bucket). */
-export const MAX_DOC_BYTES = 5 * 1024 * 1024;
+// Documents cap: a single file must be 5 MB or smaller (also set on the bucket).
+// NOT exported — a "use server" file may only export async functions, so a
+// public const here 500s every action in this module at runtime.
+const MAX_DOC_BYTES = 5 * 1024 * 1024;
 
 const PIPELINE = [
   "Applied",
