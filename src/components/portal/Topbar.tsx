@@ -6,10 +6,10 @@ import MobileNav from "./MobileNav";
 export default function Topbar({ ctx }: { ctx: PortalContext }) {
   const { institute, session, name, role } = ctx;
   const count = session?.total_applications_received ?? 0;
-  const nearCap = institute.plan === "Free" && count >= 180;
+  const nearCap = institute.plan === "Free" && count >= FREE_TIER_CAP * 0.9;
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl sm:gap-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border bg-background/95 px-4 py-3 backdrop-blur-xl sm:gap-4 sm:px-6">
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <MobileNav role={role} />
         <span className="truncate text-[14px] font-semibold tracking-tight">

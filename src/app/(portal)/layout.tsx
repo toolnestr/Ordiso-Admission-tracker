@@ -21,7 +21,7 @@ export default async function PortalLayout({
   const ctx = await getPortalContext();
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh overflow-x-clip">
       <TopLoader />
       <Sidebar role={ctx.role} />
       <div className="md:pl-60">
