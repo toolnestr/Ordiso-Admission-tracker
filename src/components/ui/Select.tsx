@@ -169,7 +169,7 @@ export default function Select({
         left: rect.left,
         width: rect.width,
       }}
-      className="z-[120] overflow-hidden rounded-xl border border-border-strong bg-[#12121a] shadow-[0_16px_48px_-12px_rgba(0,0,0,0.85)]"
+      className="z-[210] overflow-hidden rounded-xl border border-border-strong bg-[#12121a] shadow-[0_16px_48px_-12px_rgba(0,0,0,0.85)]"
     >
       {searchable && (
         <div className="border-b border-border p-1.5">

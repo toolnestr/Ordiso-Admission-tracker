@@ -130,6 +130,7 @@ export function CompleteFollowUpDialog({
   const [state, action, pending] = useActionState(completeFollowUp, initial);
   const [tag, setTag] = useState("Reached");
   const [wantsNext, setWantsNext] = useState(false);
+  const [reject, setReject] = useState(false);
   const [nextDate, setNextDate] = useState(today);
 
   // Close once the action finishes without an error.
@@ -178,6 +179,7 @@ export function CompleteFollowUpDialog({
           />
         </label>
 
+        {!reject && (
         <div className="rounded-lg border border-border p-3">
           <label className="flex cursor-pointer items-start gap-2.5">
             <input
@@ -223,6 +225,33 @@ export function CompleteFollowUpDialog({
             </div>
           )}
         </div>
+        )}
+
+        {/* No longer interested → reject the applicant right here. */}
+        <input type="hidden" name="reject" value={reject ? "1" : "0"} />
+        <label
+          className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 ${
+            reject
+              ? "border-red-500/30 bg-red-500/10"
+              : "border-border"
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={reject}
+            onChange={(e) => setReject(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-red-500"
+          />
+          <span>
+            <span className="block text-[13.5px] font-medium">
+              No longer interested — reject applicant
+            </span>
+            <span className="block text-[12px] text-muted">
+              Moves them to Rejected; your notes above become the reason (shown
+              on the Rejections report + PDF).
+            </span>
+          </span>
+        </label>
 
         {state.error && (
           <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-[13px] text-red-300">
@@ -242,10 +271,14 @@ export function CompleteFollowUpDialog({
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-foreground px-4 py-2.5 text-[13.5px] font-medium text-background disabled:opacity-50"
+            className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-[13.5px] font-medium disabled:opacity-50 ${
+              reject
+                ? "bg-red-500/90 text-white"
+                : "bg-foreground text-background"
+            }`}
           >
             <CheckCircle2 className="h-4 w-4" strokeWidth={1.8} />
-            {pending ? "Saving…" : "Mark done"}
+            {pending ? "Saving…" : reject ? "Reject applicant" : "Mark done"}
           </button>
         </div>
       </form>

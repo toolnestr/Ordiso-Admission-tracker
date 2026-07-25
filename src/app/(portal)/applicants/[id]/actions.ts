@@ -684,7 +684,9 @@ export async function completeFollowUp(
   const applicantId = String(formData.get("applicant_id") || "");
   const outcome = String(formData.get("outcome") || "").trim();
   const outcomeTag = String(formData.get("outcome_tag") || "").trim();
-  const nextDate = String(formData.get("next_date") || "").trim();
+  const reject = String(formData.get("reject") || "") === "1";
+  // A rejection ends the pipeline — never also book a next call.
+  const nextDate = reject ? "" : String(formData.get("next_date") || "").trim();
   const nextRemark = String(formData.get("next_remark") || "").trim();
 
   if (nextDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) {
@@ -692,6 +694,36 @@ export async function completeFollowUp(
   }
 
   const supabase = await createClient();
+
+  // "No longer interested" — reject the applicant straight from the follow-up
+  // instead of making staff go hunt for the Status control. The outcome note
+  // becomes the rejection reason so it shows on the Rejections report + PDF.
+  if (reject) {
+    const { data: appRow } = await supabase
+      .from("applicants")
+      .select("status")
+      .eq("id", applicantId)
+      .single();
+    if (appRow?.status?.startsWith("Confirmed")) {
+      return { error: "This applicant is already confirmed — reject not allowed." };
+    }
+    const reason =
+      outcome || (outcomeTag ? `Follow-up: ${outcomeTag}` : "No longer interested");
+    const { error: rejErr } = await supabase
+      .from("applicants")
+      .update({ status: "Rejected", rejection_reason: reason })
+      .eq("id", applicantId);
+    if (rejErr) return { error: "Could not reject the applicant." };
+    await logActivity({
+      instituteId: ctx.institute.id,
+      applicantId,
+      staffId: ctx.staffId,
+      actionType: "status_change",
+      description: `Rejected via follow-up${outcomeTag ? ` (${outcomeTag})` : ""}`,
+      reason,
+    });
+    await sendApplicantEmail("rejected", { applicantId });
+  }
 
   // Book the next call first: if this fails we don't want a closed follow-up
   // with no successor (that's how a parent gets forgotten).
