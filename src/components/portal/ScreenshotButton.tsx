@@ -52,7 +52,9 @@ export default function ScreenshotButton({
       ) : (
         <Camera className="h-4 w-4" strokeWidth={1.8} />
       )}
-      {busy ? "Capturing…" : "Screenshot"}
+      <span className="hidden sm:inline">
+        {busy ? "Capturing…" : "Screenshot"}
+      </span>
     </button>
   );
 }
