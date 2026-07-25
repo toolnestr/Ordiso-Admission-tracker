@@ -26,7 +26,7 @@ alter table super_admins enable row level security;
 -- Sign up / log in normally first (so an auth user exists), then run:
 --
 --   insert into super_admins (auth_user_id, email)
---   select id, email from auth.users where email = 'you@example.com';
+--   select id, email from auth.users where email = 'toolnestr@gmail.com';
 --
 -- To check it worked:
 --   select email from super_admins;
