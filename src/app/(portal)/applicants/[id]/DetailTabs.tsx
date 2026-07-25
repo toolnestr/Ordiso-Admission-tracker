@@ -15,7 +15,6 @@ import {
   CalendarClock,
   Undo2,
   CalendarPlus,
-  Eye,
 } from "lucide-react";
 import {
   addFee,
@@ -836,66 +835,62 @@ function FollowUpsTab({
             const forOther = familyLabel && f.applicant_id !== applicantId;
             return (
               <div key={f.id} className="surface rounded-xl p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <CalendarClock className="h-4 w-4 text-muted" strokeWidth={1.7} />
-                  <span className="text-[13.5px] font-medium">
-                    {fmtDate(f.due_date)}
-                  </span>
-                  {overdue ? (
-                    <span className="badge badge-red">Overdue</span>
-                  ) : (
-                    <span className="badge badge-amber">Pending</span>
-                  )}
-                  {forOther && f.applicantName && (
-                    <span className="text-[11.5px] text-muted">
-                      · {f.applicantName}
+                {/* Tap the body for the full remark; actions sit below. */}
+                <button
+                  type="button"
+                  onClick={() => setViewing(f)}
+                  className="block w-full text-left"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CalendarClock className="h-4 w-4 text-muted" strokeWidth={1.7} />
+                    <span className="text-[13.5px] font-medium">
+                      {fmtDate(f.due_date)}
                     </span>
+                    {overdue ? (
+                      <span className="badge badge-red">Overdue</span>
+                    ) : (
+                      <span className="badge badge-amber">Pending</span>
+                    )}
+                    {forOther && f.applicantName && (
+                      <span className="text-[11.5px] text-muted">
+                        · {f.applicantName}
+                      </span>
+                    )}
+                  </div>
+                  {f.remark && (
+                    <p className="mt-1.5 line-clamp-1 break-words text-[13px] text-muted-strong">
+                      {f.remark}
+                    </p>
                   )}
-                </div>
+                </button>
 
-                {f.remark && (
-                  <p className="mt-2 line-clamp-2 whitespace-pre-wrap break-words text-[13.5px]">
-                    {f.remark}
-                  </p>
+                {canEdit && (
+                  <div className="mt-2.5 flex items-center gap-1.5 border-t border-border pt-2.5">
+                    <button
+                      onClick={() => setCompleting(f)}
+                      className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2.5 py-1.5 text-[12px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20"
+                    >
+                      Mark done
+                    </button>
+                    <button
+                      onClick={() => setRescheduling(f)}
+                      className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[12px] text-muted-strong transition-colors hover:text-foreground"
+                    >
+                      <CalendarPlus className="h-3.5 w-3.5" strokeWidth={1.8} />
+                      Reschedule
+                    </button>
+                    <button
+                      onClick={() =>
+                        startBusy(() => deleteFollowUp(f.id, f.applicant_id))
+                      }
+                      disabled={busy}
+                      aria-label="Delete follow-up"
+                      className="ml-auto rounded-md p-1 text-muted transition-colors hover:text-red-400 disabled:opacity-40"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 )}
-
-                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
-                  <span>{f.staff?.name ?? "Unknown"}</span>
-                  <button
-                    onClick={() => setViewing(f)}
-                    className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-muted-strong transition-colors hover:text-foreground"
-                  >
-                    <Eye className="h-3.5 w-3.5" strokeWidth={1.8} />
-                    View
-                  </button>
-                  {canEdit && (
-                    <>
-                      <button
-                        onClick={() => setRescheduling(f)}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-muted-strong transition-colors hover:text-foreground"
-                      >
-                        <CalendarPlus className="h-3.5 w-3.5" strokeWidth={1.8} />
-                        Reschedule
-                      </button>
-                      <button
-                        onClick={() => setCompleting(f)}
-                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/10"
-                      >
-                        Mark done
-                      </button>
-                      <button
-                        onClick={() =>
-                          startBusy(() => deleteFollowUp(f.id, f.applicant_id))
-                        }
-                        disabled={busy}
-                        aria-label="Delete follow-up"
-                        className="rounded-md p-1 text-muted transition-colors hover:text-red-400 disabled:opacity-40"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </>
-                  )}
-                </div>
               </div>
             );
           })}

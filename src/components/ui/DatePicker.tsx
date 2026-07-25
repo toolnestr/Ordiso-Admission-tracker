@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 
 const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
@@ -58,24 +59,36 @@ export default function DatePicker({
   const selected = useMemo(() => parseKey(value), [value]);
   const [view, setView] = useState(() => selected ?? new Date());
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [rect, setRect] = useState<DOMRect | null>(null);
 
-  useEffect(() => {
-    if (selected) setView(selected);
-  }, [selected]);
-
+  // Portalled to <body> with fixed positioning so the calendar floats above
+  // dialogs and never gets clipped by an `overflow` ancestor (e.g. a modal's
+  // scroll area). Track the trigger so it stays put on scroll/resize.
   useEffect(() => {
     if (!open) return;
+    const sync = () =>
+      setRect(btnRef.current?.getBoundingClientRect() ?? null);
+    sync();
     function onDown(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (!rootRef.current?.contains(t) && !menuRef.current?.contains(t)) {
+        setOpen(false);
+      }
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
     }
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", sync, true);
+    window.addEventListener("resize", sync);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", sync, true);
+      window.removeEventListener("resize", sync);
     };
   }, [open]);
 
@@ -110,8 +123,13 @@ export default function DatePicker({
       )}
 
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          // Jump the calendar to the selected month each time it opens.
+          if (!open) setView(selected ?? new Date());
+          setOpen((v) => !v);
+        }}
         className="surface-2 flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-[14px] transition-colors hover:border-border-strong"
       >
         <span className={selected ? "" : "text-muted"}>
@@ -126,8 +144,18 @@ export default function DatePicker({
         <Calendar className="h-4 w-4 shrink-0 text-muted" strokeWidth={1.7} />
       </button>
 
-      {open && (
-        <div className="absolute z-50 mt-1.5 w-[268px] rounded-xl border border-border-strong bg-[#12121a] p-3 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.85)]">
+      {open &&
+        rect &&
+        typeof document !== "undefined" &&
+        createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: "fixed",
+            top: rect.bottom + 6,
+            left: Math.min(rect.left, window.innerWidth - 284),
+          }}
+          className="z-[210] w-[268px] rounded-xl border border-border-strong bg-[#12121a] p-3 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.85)]">
           {/* Month nav */}
           <div className="mb-2 flex items-center justify-between">
             <button
@@ -211,7 +239,8 @@ export default function DatePicker({
               </button>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

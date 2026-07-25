@@ -397,63 +397,58 @@ export default function FollowUpsView({
                           key={f.id}
                           className="rounded-lg border border-border px-3 py-2"
                         >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <CalendarClock
-                              className="h-3.5 w-3.5 text-muted"
-                              strokeWidth={1.7}
-                            />
-                            <span className="text-[12.5px]">
-                              {fmtDate(f.dueDate)}
-                            </span>
-                            {done ? (
-                              <span className="badge badge-green">Done</span>
-                            ) : overdue ? (
-                              <span className="badge badge-red">Overdue</span>
-                            ) : (
-                              <span className="badge badge-amber">Pending</span>
-                            )}
-                            {g.isFamily && (
-                              <Link
-                                href={`/applicants/${f.applicantId}`}
-                                className="text-[11.5px] text-muted hover:text-accent"
-                              >
-                                · {f.name}
-                              </Link>
-                            )}
-                            {f.outcomeTag && (
-                              <span className="badge badge-accent">
-                                {f.outcomeTag}
+                          <button
+                            type="button"
+                            onClick={() => setViewing(f)}
+                            className="block w-full text-left"
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <CalendarClock
+                                className="h-3.5 w-3.5 text-muted"
+                                strokeWidth={1.7}
+                              />
+                              <span className="text-[12.5px]">
+                                {fmtDate(f.dueDate)}
                               </span>
-                            )}
-                            <div className="ml-auto flex items-center gap-1">
-                              <button
-                                onClick={() => setViewing(f)}
-                                className="rounded-md px-2 py-0.5 text-[11.5px] text-muted-strong transition-colors hover:text-foreground"
-                              >
-                                View
-                              </button>
-                              {canEdit && !done && (
-                                <>
-                                  <button
-                                    onClick={() => setRescheduling(f)}
-                                    className="rounded-md px-2 py-0.5 text-[11.5px] text-muted-strong transition-colors hover:text-foreground"
-                                  >
-                                    Reschedule
-                                  </button>
-                                  <button
-                                    onClick={() => setCompleting(f)}
-                                    className="rounded-md px-2 py-0.5 text-[11.5px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/10"
-                                  >
-                                    Mark done
-                                  </button>
-                                </>
+                              {done ? (
+                                <span className="badge badge-green">Done</span>
+                              ) : overdue ? (
+                                <span className="badge badge-red">Overdue</span>
+                              ) : (
+                                <span className="badge badge-amber">Pending</span>
+                              )}
+                              {g.isFamily && (
+                                <span className="text-[11.5px] text-muted">
+                                  · {f.name}
+                                </span>
+                              )}
+                              {f.outcomeTag && (
+                                <span className="badge badge-accent">
+                                  {f.outcomeTag}
+                                </span>
                               )}
                             </div>
-                          </div>
-                          {(f.outcome || f.remark) && (
-                            <p className="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-[12.5px] text-muted-strong">
-                              {f.outcome || f.remark}
-                            </p>
+                            {(f.outcome || f.remark) && (
+                              <p className="mt-1 line-clamp-1 break-words text-[12.5px] text-muted-strong">
+                                {f.outcome || f.remark}
+                              </p>
+                            )}
+                          </button>
+                          {canEdit && !done && (
+                            <div className="mt-1.5 flex items-center gap-1 border-t border-border pt-1.5">
+                              <button
+                                onClick={() => setCompleting(f)}
+                                className="rounded-md bg-emerald-500/10 px-2 py-1 text-[11.5px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20"
+                              >
+                                Mark done
+                              </button>
+                              <button
+                                onClick={() => setRescheduling(f)}
+                                className="rounded-md px-2 py-1 text-[11.5px] text-muted-strong transition-colors hover:text-foreground"
+                              >
+                                Reschedule
+                              </button>
+                            </div>
                           )}
                         </div>
                       );
