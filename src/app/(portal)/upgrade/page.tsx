@@ -106,7 +106,7 @@ export default async function UpgradePage() {
             hello@ordiso.app
           </a>
           <a
-            href={`https://wa.me/0000000000?text=${wa}`}
+            href={`https://wa.me/923068977463?text=${wa}`}
             target="_blank"
             rel="noopener noreferrer"
             className="surface inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13.5px] transition-colors hover:border-border-strong"
