@@ -88,7 +88,7 @@ export default function NewSessionForm({ hasOpen }: { hasOpen: boolean }) {
             name="target_goal"
             type="number"
             min={1}
-            placeholder="e.g. 150"
+            placeholder="e.g. 100"
             className="surface-2 mt-1.5 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
           />
         </label>

@@ -8,11 +8,11 @@ import { SectionHeading } from "./HowItWorks";
 const faqs = [
   {
     q: "Is it really free?",
-    a: "Yes. The free plan lets you manage up to 150 students per admission session, with the full form builder, dashboard, QR sharing, and up to 3 staff seats — no credit card, no setup fee, no time limit.",
+    a: "Yes. The free plan lets you manage up to 100 students per admission session, with the full form builder, dashboard, QR sharing, and up to 3 staff seats — no credit card, no setup fee, no time limit.",
   },
   {
-    q: "What happens after 150 students?",
-    a: "Once a session reaches 150 applicants, the public form stops accepting new submissions for that session. You can start a fresh session (another 150 free), or upgrade to a paid plan for unlimited students.",
+    q: "What happens after 100 students?",
+    a: "Once a session reaches 100 applicants, the public form stops accepting new submissions for that session. You can start a fresh session (another 100 free), or upgrade to a paid plan for unlimited students.",
   },
   {
     q: "Can I get my own domain?",
