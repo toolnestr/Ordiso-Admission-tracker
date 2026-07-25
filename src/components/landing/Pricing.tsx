@@ -252,7 +252,7 @@ function ContactModal({
 
             <div className="mt-6 space-y-2.5">
               <a
-                href="mailto:hello@ordiso.app"
+                href="mailto:info@toolnestr.com"
                 className="surface flex items-center gap-3 rounded-xl p-3.5 transition-colors hover:border-border-strong"
               >
                 <span className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface-2 text-accent">
@@ -260,7 +260,7 @@ function ContactModal({
                 </span>
                 <div>
                   <div className="text-[13.5px] font-medium">Email us</div>
-                  <div className="text-xs text-muted">hello@ordiso.app</div>
+                  <div className="text-xs text-muted">info@toolnestr.com</div>
                 </div>
               </a>
               <a

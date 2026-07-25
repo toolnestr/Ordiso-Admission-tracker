@@ -99,11 +99,11 @@ export default async function UpgradePage() {
         </p>
         <div className="mt-5 flex flex-col justify-center gap-2.5 sm:flex-row">
           <a
-            href={`mailto:hello@ordiso.app?subject=${subject}&body=${body}`}
+            href={`mailto:info@toolnestr.com?subject=${subject}&body=${body}`}
             className="surface inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-[13.5px] transition-colors hover:border-border-strong"
           >
             <Mail className="h-4 w-4 text-accent" strokeWidth={1.7} />
-            hello@ordiso.app
+            info@toolnestr.com
           </a>
           <a
             href={`https://wa.me/923068977463?text=${wa}`}
