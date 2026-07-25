@@ -25,7 +25,7 @@ const tiers: Tier[] = [
     cadence: "/ forever",
     tagline: "Run a full admission session, free.",
     features: [
-      "150 students per session",
+      "100 students per session",
       "Custom form builder",
       "Public link & QR code",
       "Full dashboard & analytics",

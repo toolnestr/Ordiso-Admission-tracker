@@ -256,7 +256,7 @@ export default function ReportPdf({
         <ChevronDown className="h-3.5 w-3.5 text-muted" />
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-1.5 w-56 overflow-hidden rounded-xl border border-border-strong bg-[#12121a] p-1 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.85)]">
+        <div className="absolute left-0 z-30 mt-1.5 w-56 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border-strong bg-[#12121a] p-1 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.85)] sm:left-auto sm:right-0">
           {REPORTS.map((r) => (
             <button
               key={r.key}
