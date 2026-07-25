@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { AlertCircle } from "lucide-react";
 import AuthShell from "@/components/auth/AuthShell";
 import Field from "@/components/auth/Field";
+import PhoneField from "@/components/auth/PhoneField";
 import { registerInstitute, type RegisterState } from "./actions";
 
 const initialState: RegisterState = { error: null };
@@ -37,6 +38,7 @@ export default function RegisterPage() {
           type="email"
           autoComplete="email"
         />
+        <PhoneField label="Mobile number" />
         <Field
           label="Password"
           name="password"

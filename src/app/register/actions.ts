@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { DIAL_CODES } from "@/lib/dialCodes";
 
 export type RegisterState = { error: string | null };
 
@@ -25,8 +26,25 @@ export async function registerInstitute(
     .toLowerCase();
   const password = String(formData.get("password") || "");
 
-  if (!instituteName || !adminName || !email || !password) {
+  // Combine the country code + national number into one E.164-style string
+  // (+<code><digits>) so it's stored consistently and works as a tel:/WhatsApp
+  // link everywhere. The <select> submits the ISO code; map it to its dial code.
+  const phoneIso = String(formData.get("phone_cc") || "");
+  const dial = DIAL_CODES.find((c) => c.iso === phoneIso)?.dial ?? "";
+  const nationalDigits = String(formData.get("phone_national") || "").replace(
+    /\D/g,
+    "",
+  );
+  const phone = dial && nationalDigits ? `${dial}${nationalDigits}` : "";
+
+  if (!instituteName || !adminName || !email || !password || !nationalDigits) {
     return { error: "Please fill in every field." };
+  }
+  if (!dial) {
+    return { error: "Please choose a country code." };
+  }
+  if (nationalDigits.length < 6 || nationalDigits.length > 15) {
+    return { error: "Please enter a valid mobile number." };
   }
   if (password.length < 8) {
     return { error: "Password must be at least 8 characters." };
@@ -52,7 +70,11 @@ export async function registerInstitute(
   // 2. Create the institute (the permanent Institute ID used everywhere else).
   const { data: institute, error: instErr } = await service
     .from("institutes")
-    .insert({ display_name: instituteName, contact_email: email })
+    .insert({
+      display_name: instituteName,
+      contact_email: email,
+      contact_phone: phone,
+    })
     .select("id")
     .single();
 

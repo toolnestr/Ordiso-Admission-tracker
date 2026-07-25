@@ -102,6 +102,22 @@ export default async function AdminInstitutePage({
                 </a>
               </>
             )}
+            {inst.contact_phone && (
+              <>
+                <span>·</span>
+                <a href={`tel:${inst.contact_phone}`} className="hover:text-foreground">
+                  {inst.contact_phone}
+                </a>
+                <a
+                  href={`https://wa.me/${inst.contact_phone.replace(/[^0-9]/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-green-400/80 hover:text-green-300"
+                >
+                  WhatsApp
+                </a>
+              </>
+            )}
           </div>
         </div>
         <Link
