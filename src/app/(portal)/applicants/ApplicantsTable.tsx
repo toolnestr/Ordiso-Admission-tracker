@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Users2, MessageCircle, Phone } from "lucide-react";
+import { sourceLabel } from "@/components/charts/palette";
 
 /**
  * One contact button that reveals Call + WhatsApp. Call opens the phone
@@ -226,7 +227,7 @@ function SoloRow({ a }: { a: Applicant }) {
           {a.status}
         </span>
       </td>
-      <td className="px-4 py-3 text-muted-strong">{a.source}</td>
+      <td className="px-4 py-3 text-muted-strong">{sourceLabel(a.source)}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="font-mono text-[12.5px] text-muted">
@@ -310,7 +311,7 @@ function FamilyRows({
                 {m.status}
               </span>
             </td>
-            <td className="px-4 py-2.5 text-muted-strong">{m.source}</td>
+            <td className="px-4 py-2.5 text-muted-strong">{sourceLabel(m.source)}</td>
             <td className="px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[12.5px] text-muted">

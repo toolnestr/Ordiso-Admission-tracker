@@ -94,7 +94,7 @@ export default function NewEnquiry({
         p_email: email,
         p_phone: phone,
         p_program_id: students[0].programId || null,
-        p_source: "Direct",
+        p_source: "Manual",
       });
       setSubmitting(false);
       const res = data as {
@@ -124,6 +124,7 @@ export default function NewEnquiry({
       p_institute_id: instituteId,
       p_family_label: familyLabel,
       p_students: toGroupPayload(students, fields, shared),
+      p_source: "Manual",
     });
     setSubmitting(false);
     const res = data as {
