@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck, LogOut } from "lucide-react";
+import { ShieldCheck, LogOut, MessageSquare } from "lucide-react";
 import { requireSuperAdmin } from "@/lib/superadmin";
 import { signOut } from "@/app/(portal)/actions";
 
@@ -26,6 +26,13 @@ export default async function AdminLayout({
           </div>
 
           <div className="flex items-center gap-3">
+            <Link
+              href="/admin/feedback"
+              className="surface-2 flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors hover:bg-[var(--border)]"
+            >
+              <MessageSquare className="h-3.5 w-3.5" strokeWidth={1.8} />
+              <span className="hidden sm:inline">Feedback</span>
+            </Link>
             <span className="hidden text-[12.5px] text-muted sm:block">
               {sa.email}
             </span>

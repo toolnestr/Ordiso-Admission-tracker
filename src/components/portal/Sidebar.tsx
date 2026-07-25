@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Logo } from "@/components/landing/Nav";
+import FeedbackButton from "@/components/portal/FeedbackButton";
 import type { StaffRole } from "@/lib/portal";
 
 export type NavItem = {
@@ -107,6 +108,8 @@ export default function Sidebar({ role }: { role: StaffRole }) {
         <Sparkles className="h-[17px] w-[17px]" strokeWidth={1.7} />
         Upgrade to Premium
       </Link>
+
+      <FeedbackButton variant="sidebar" />
     </aside>
   );
 }

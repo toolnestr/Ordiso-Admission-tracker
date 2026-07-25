@@ -32,6 +32,18 @@ export async function setNewPassword(
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
+    // Supabase rejects reusing the current password with a dedicated code.
+    // Surface that plainly instead of the generic failure, which otherwise
+    // reads as "something broke" when the user simply typed their old one.
+    const isSamePassword =
+      error.code === "same_password" ||
+      /should be different from the old password/i.test(error.message);
+    if (isSamePassword) {
+      return {
+        error:
+          "That's your current password. Please choose a new one you haven't used before.",
+      };
+    }
     return { error: "Could not update your password. Please try again." };
   }
 

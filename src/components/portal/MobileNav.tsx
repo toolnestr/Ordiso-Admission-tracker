@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, Sparkles } from "lucide-react";
 import { Logo } from "@/components/landing/Nav";
 import { nav } from "./Sidebar";
+import FeedbackButton from "@/components/portal/FeedbackButton";
 import type { StaffRole } from "@/lib/portal";
 
 /**
@@ -108,6 +109,10 @@ export default function MobileNav({ role }: { role: StaffRole }) {
               <Sparkles className="h-[18px] w-[18px]" strokeWidth={1.7} />
               Upgrade
             </Link>
+
+            <div className="mt-2">
+              <FeedbackButton variant="mobile" />
+            </div>
           </div>
           </div>,
           document.body,
