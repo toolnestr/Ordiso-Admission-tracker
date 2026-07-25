@@ -62,7 +62,55 @@ export default async function SessionsPage() {
             </p>
           </div>
         ) : (
-          <div className="surface overflow-hidden rounded-2xl">
+          <>
+          {/* Mobile: cards (the table overflows on narrow screens) */}
+          <div className="space-y-3 sm:hidden">
+            {list.map((s) => (
+              <div key={s.id} className="surface rounded-2xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium">{s.name}</div>
+                    {s.target_goal && (
+                      <div className="text-[12px] text-muted">
+                        Target: {s.target_goal}
+                      </div>
+                    )}
+                  </div>
+                  <StatusBadge status={s.status} />
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-3 text-[13px]">
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-muted">
+                      Dates
+                    </div>
+                    <div className="mt-0.5 text-muted-strong">
+                      {fmt(s.start_date)} — {fmt(s.end_date)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wide text-muted">
+                      Applicants
+                    </div>
+                    <div className="mt-0.5 tabular-nums">
+                      {s.total_applications_received}
+                    </div>
+                  </div>
+                </div>
+                {ctx.role === "Admin" && (
+                  <div className="mt-3 flex justify-end">
+                    {s.status === "Open" ? (
+                      <CloseButton sessionId={s.id} />
+                    ) : (
+                      <ReopenButton sessionId={s.id} disabled={hasOpen} />
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="surface hidden overflow-hidden rounded-2xl sm:block">
             <table className="w-full text-left text-[13.5px]">
               <thead>
                 <tr className="border-b border-border text-[12px] uppercase tracking-wide text-muted">
@@ -93,20 +141,7 @@ export default async function SessionsPage() {
                       {fmt(s.start_date)} — {fmt(s.end_date)}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[12px] font-medium ${
-                          s.status === "Open"
-                            ? "bg-accent-soft text-accent"
-                            : "bg-surface-2 text-muted"
-                        }`}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            s.status === "Open" ? "bg-accent" : "bg-muted"
-                          }`}
-                        />
-                        {s.status}
-                      </span>
+                      <StatusBadge status={s.status} />
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       {s.total_applications_received}
@@ -125,8 +160,25 @@ export default async function SessionsPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const open = status === "Open";
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[12px] font-medium ${
+        open ? "bg-accent-soft text-accent" : "bg-surface-2 text-muted"
+      }`}
+    >
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${open ? "bg-accent" : "bg-muted"}`}
+      />
+      {status}
+    </span>
   );
 }
