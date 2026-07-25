@@ -27,7 +27,7 @@ export default function SuspendedPage() {
         </p>
 
         <a
-          href="mailto:hello@ordiso.app"
+          href="mailto:info@toolnestr.com"
           className="mt-6 inline-block rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90"
         >
           Contact support
