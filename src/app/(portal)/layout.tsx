@@ -1,6 +1,7 @@
 import Sidebar from "@/components/portal/Sidebar";
 import Topbar from "@/components/portal/Topbar";
 import Announcements from "@/components/portal/Announcements";
+import TopLoader from "@/components/portal/TopLoader";
 import { getPortalContext } from "@/lib/portal";
 import { planLabel } from "@/lib/plan";
 
@@ -21,6 +22,7 @@ export default async function PortalLayout({
 
   return (
     <div className="min-h-dvh">
+      <TopLoader />
       <Sidebar role={ctx.role} />
       <div className="md:pl-60">
         <Topbar ctx={ctx} />

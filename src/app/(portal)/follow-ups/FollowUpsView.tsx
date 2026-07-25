@@ -225,51 +225,51 @@ export default function FollowUpsView({
 
   return (
     <div className="mt-6">
-      {/* Export toolbar */}
-      <div className="card-sheen flex flex-col gap-4 rounded-2xl p-4 sm:flex-row sm:flex-wrap sm:items-end">
-        <div className="flex items-end gap-2">
-          <div>
-            <span className="mb-1.5 block text-[12px] text-muted">
-              Daily report
-            </span>
-            <div className="w-[170px]">
+      {/* Export toolbar — stacks on mobile, inline on sm+ */}
+      <div className="card-sheen space-y-3 rounded-2xl p-4 sm:flex sm:flex-wrap sm:items-end sm:gap-4 sm:space-y-0">
+        <div>
+          <span className="mb-1.5 block text-[12px] text-muted">
+            Daily report
+          </span>
+          <div className="flex items-end gap-2">
+            <div className="flex-1 sm:w-[160px] sm:flex-none">
               <DatePicker value={day} onChange={setDay} />
             </div>
+            <button
+              onClick={() => exportPdf("day", day)}
+              disabled={pdfBusy || !day}
+              className="surface-2 inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-[13px] font-medium transition-colors hover:bg-[var(--border)] disabled:opacity-60"
+            >
+              <FileText className="h-4 w-4" strokeWidth={1.8} />
+              Export
+            </button>
           </div>
-          <button
-            onClick={() => exportPdf("day", day)}
-            disabled={pdfBusy || !day}
-            className="surface-2 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors hover:bg-[var(--border)] disabled:opacity-60"
-          >
-            <FileText className="h-4 w-4" strokeWidth={1.8} />
-            Export day
-          </button>
         </div>
-        <div className="flex items-end gap-2">
-          <div>
-            <span className="mb-1.5 block text-[12px] text-muted">
-              Monthly report
-            </span>
-            <div className="flex gap-2">
-              <div className="w-[130px]">
-                <Select value={mMonth} onChange={setMMonth} options={monthOptions} />
-              </div>
-              <div className="w-[90px]">
-                <Select value={mYear} onChange={setMYear} options={yearOptions} />
-              </div>
+        <div>
+          <span className="mb-1.5 block text-[12px] text-muted">
+            Monthly report
+          </span>
+          <div className="flex items-end gap-2">
+            <div className="flex-1 sm:w-[124px] sm:flex-none">
+              <Select value={mMonth} onChange={setMMonth} options={monthOptions} />
             </div>
+            <div className="w-[84px] shrink-0">
+              <Select value={mYear} onChange={setMYear} options={yearOptions} />
+            </div>
+            <button
+              onClick={() => exportPdf("month", `${mYear}-${mMonth}`)}
+              disabled={pdfBusy}
+              className="surface-2 inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-[13px] font-medium transition-colors hover:bg-[var(--border)] disabled:opacity-60"
+            >
+              <FileText className="h-4 w-4" strokeWidth={1.8} />
+              Export
+            </button>
           </div>
-          <button
-            onClick={() => exportPdf("month", `${mYear}-${mMonth}`)}
-            disabled={pdfBusy}
-            className="surface-2 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors hover:bg-[var(--border)] disabled:opacity-60"
-          >
-            <FileText className="h-4 w-4" strokeWidth={1.8} />
-            Export month
-          </button>
         </div>
         {pdfBusy && (
-          <span className="text-[12px] text-muted">Preparing PDF…</span>
+          <span className="text-[12px] text-muted sm:self-center">
+            Preparing PDF…
+          </span>
         )}
       </div>
 
