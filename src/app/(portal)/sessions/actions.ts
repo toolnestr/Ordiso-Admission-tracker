@@ -3,13 +3,30 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
+import { FREE_SESSIONS_PER_YEAR } from "@/lib/limits";
 
 export type SessionActionState = { error: string | null };
 
 /**
- * Creates a new admission session. The DB partial unique index
- * (one_open_session_per_institute) is the real guard against two open
- * sessions; we surface a friendly message if it trips.
+ * Whether the institute is limited to Free-tier rules: on Free, or on a paid
+ * plan whose expiry has passed. Mirrors the applicant-cap RPC (grace is not
+ * considered), so the session quota behaves the same way the 100 cap does.
+ */
+function isFreeLimited(
+  plan: string,
+  expiresAt: string | null,
+): boolean {
+  if (plan === "Free") return true;
+  return !!expiresAt && new Date(expiresAt).getTime() < Date.now();
+}
+
+/**
+ * Creates a new admission session. Two DB-level guards back this up: the
+ * partial unique index (one_open_session_per_institute) against two open
+ * sessions, and the free_session_quota trigger (migration 0017) capping Free
+ * institutes to FREE_SESSIONS_PER_YEAR per calendar year. We pre-check the
+ * quota for a friendly upgrade message and still catch the trigger as a
+ * backstop against direct inserts.
  */
 export async function createSession(
   _prev: SessionActionState,
@@ -31,6 +48,23 @@ export async function createSession(
   }
 
   const supabase = await createClient();
+
+  // Free-tier yearly session quota (Section: monetization). Count this
+  // institute's sessions created in the current calendar year.
+  if (isFreeLimited(ctx.institute.plan, ctx.institute.plan_expires_at)) {
+    const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString();
+    const { count } = await supabase
+      .from("sessions")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", yearStart);
+
+    if ((count ?? 0) >= FREE_SESSIONS_PER_YEAR) {
+      return {
+        error: `Your Free plan includes ${FREE_SESSIONS_PER_YEAR} admission sessions per year. Upgrade to create more.`,
+      };
+    }
+  }
+
   const { data: session, error } = await supabase
     .from("sessions")
     .insert({
@@ -49,6 +83,11 @@ export async function createSession(
       return {
         error:
           "You already have an open session. Close it before opening a new one.",
+      };
+    }
+    if (error.message?.includes("free_session_quota")) {
+      return {
+        error: `Your Free plan includes ${FREE_SESSIONS_PER_YEAR} admission sessions per year. Upgrade to create more.`,
       };
     }
     return { error: "Could not create the session. Please try again." };

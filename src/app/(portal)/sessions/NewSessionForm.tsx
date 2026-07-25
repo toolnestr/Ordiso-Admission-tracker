@@ -7,23 +7,46 @@ import { createSession, type SessionActionState } from "./actions";
 
 const initial: SessionActionState = { error: null };
 
-export default function NewSessionForm({ hasOpen }: { hasOpen: boolean }) {
+export default function NewSessionForm({
+  hasOpen,
+  quotaReached = false,
+}: {
+  hasOpen: boolean;
+  quotaReached?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [state, action, pending] = useActionState(createSession, initial);
 
   if (!open) {
+    const disabled = hasOpen || quotaReached;
+    const title = hasOpen
+      ? "Close your open session first"
+      : quotaReached
+        ? "You've used your Free sessions for this year — upgrade to create more"
+        : undefined;
     return (
-      <button
-        onClick={() => setOpen(true)}
-        disabled={hasOpen}
-        title={hasOpen ? "Close your open session first" : undefined}
-        className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3.5 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        <Plus className="h-4 w-4" strokeWidth={2} />
-        New session
-      </button>
+      <div>
+        <button
+          onClick={() => setOpen(true)}
+          disabled={disabled}
+          title={title}
+          className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3.5 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2} />
+          New session
+        </button>
+        {quotaReached && !hasOpen && (
+          <p className="mt-2 text-[12.5px] text-muted">
+            You&apos;ve reached your Free plan&apos;s sessions for this year.{" "}
+            <a href="/upgrade" className="font-medium text-accent hover:underline">
+              Upgrade
+            </a>{" "}
+            to run more.
+          </p>
+        )}
+      </div>
     );
   }
 

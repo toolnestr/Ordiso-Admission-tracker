@@ -1,6 +1,7 @@
 import { CalendarRange } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
+import { FREE_SESSIONS_PER_YEAR } from "@/lib/limits";
 import NewSessionForm from "./NewSessionForm";
 import { CloseButton, ReopenButton } from "./SessionActions";
 
@@ -19,12 +20,25 @@ export default async function SessionsPage() {
   const { data: sessions } = await supabase
     .from("sessions")
     .select(
-      "id, name, start_date, end_date, status, total_applications_received, target_goal",
+      "id, name, start_date, end_date, status, total_applications_received, target_goal, created_at",
     )
     .order("start_date", { ascending: false });
 
   const list = sessions ?? [];
   const hasOpen = list.some((s) => s.status === "Open");
+
+  // Free-tier yearly session quota (mirrors createSession / the DB trigger).
+  const now = new Date();
+  const plan = ctx.institute.plan;
+  const expiresAt = ctx.institute.plan_expires_at;
+  const freeLimited =
+    plan === "Free" ||
+    (!!expiresAt && new Date(expiresAt).getTime() < now.getTime());
+  const thisYear = now.getFullYear();
+  const sessionsThisYear = list.filter(
+    (s) => new Date(s.created_at).getFullYear() === thisYear,
+  ).length;
+  const quotaReached = freeLimited && sessionsThisYear >= FREE_SESSIONS_PER_YEAR;
 
   return (
     <div>
@@ -39,13 +53,22 @@ export default async function SessionsPage() {
           <p className="mt-1.5 text-[13.5px] text-muted">
             One session can be open at a time. Closing a session stops the
             public form from accepting new applications.
+            {freeLimited && (
+              <>
+                {" "}
+                <span className="text-muted-strong">
+                  Free plan: {sessionsThisYear} of {FREE_SESSIONS_PER_YEAR}{" "}
+                  sessions used in {thisYear}.
+                </span>
+              </>
+            )}
           </p>
         </div>
       </div>
 
       {ctx.role === "Admin" && (
         <div className="mt-6">
-          <NewSessionForm hasOpen={hasOpen} />
+          <NewSessionForm hasOpen={hasOpen} quotaReached={quotaReached} />
         </div>
       )}
 

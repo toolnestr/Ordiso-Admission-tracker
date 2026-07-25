@@ -12,3 +12,10 @@ export const FREE_TIER_CAP = 100;
 
 /** Max staff accounts (any mix of roles) on the Free plan. */
 export const FREE_STAFF_SEATS = 3;
+
+/**
+ * Max admission sessions a Free (or lapsed-paid) institute may create per
+ * calendar year. Stops the "cycle sessions to reset the 100 cap" loophole.
+ * Kept in sync with the DB trigger in migration 0017 (change both together).
+ */
+export const FREE_SESSIONS_PER_YEAR = 2;
