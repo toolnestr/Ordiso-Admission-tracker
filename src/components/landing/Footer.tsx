@@ -12,6 +12,9 @@ export default function Footer() {
           <a href="/status" className="transition-colors hover:text-foreground">
             Track application
           </a>
+          <a href="/contact" className="transition-colors hover:text-foreground">
+            Contact
+          </a>
           <a href="/login" className="transition-colors hover:text-foreground">
             Institute login
           </a>

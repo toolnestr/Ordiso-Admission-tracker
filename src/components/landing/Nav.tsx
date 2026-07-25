@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 
+// Absolute (/#…) so the section jumps also work from other pages that share
+// this nav (e.g. /contact), not just the landing page itself.
 const links = [
-  { href: "#how", label: "How it works" },
-  { href: "#features", label: "Features" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#faq", label: "FAQ" },
+  { href: "/#how", label: "How it works" },
+  { href: "/#features", label: "Features" },
+  { href: "/#pricing", label: "Pricing" },
+  { href: "/#faq", label: "FAQ" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export default function Nav() {
