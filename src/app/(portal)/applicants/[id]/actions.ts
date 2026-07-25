@@ -400,6 +400,41 @@ export async function waiveFee(feeId: string, applicantId: string) {
 }
 
 /**
+ * Undo a waive (waived in error / management reversed the decision). Restores
+ * the fee from its payment history rather than guessing a status. Admin-only,
+ * mirroring waiveFee.
+ */
+export async function unwaiveFee(feeId: string, applicantId: string) {
+  const ctx = await getPortalContext();
+  if (ctx.role !== "Admin") return;
+
+  const supabase = await createClient();
+  const { data: fee } = await supabase
+    .from("applicant_fees")
+    .select("name, status, amount")
+    .eq("id", feeId)
+    .single();
+  if (!fee || fee.status !== "Waived") return;
+
+  // Flip off Waived first — recomputeFee deliberately skips waived fees.
+  await supabase
+    .from("applicant_fees")
+    .update({ status: "Pending", remaining_balance: Number(fee.amount) })
+    .eq("id", feeId);
+  await recomputeFee(supabase, feeId);
+
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId,
+    staffId: ctx.staffId,
+    actionType: "fee_waive_undone",
+    description: `Waiver removed: ${fee.name ?? "fee"}`,
+  });
+
+  refresh(applicantId);
+}
+
+/**
  * Admin override confirm. Requires a reason. If a balance is still due the
  * status is Confirmed-Partial so it's never conflated with a fully-paid
  * confirmation (Section 2.4).
@@ -633,46 +668,111 @@ export async function addFollowUp(
   return { error: null };
 }
 
-/** Mark a follow-up Done (optionally appending an outcome to the remark). */
-export async function resolveFollowUp(
-  followUpId: string,
-  applicantId: string,
-  outcome?: string,
-) {
+/**
+ * Complete a follow-up: record what happened and, when the parent asks to be
+ * called back, book the next one in the same step. The new follow-up is linked
+ * back via next_follow_up_id so the thread reads as one conversation.
+ */
+export async function completeFollowUp(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const ctx = await getPortalContext();
-  if (ctx.role === "Viewer") return;
+  if (ctx.role === "Viewer") return { error: "You don't have permission." };
+
+  const followUpId = String(formData.get("follow_up_id") || "");
+  const applicantId = String(formData.get("applicant_id") || "");
+  const outcome = String(formData.get("outcome") || "").trim();
+  const outcomeTag = String(formData.get("outcome_tag") || "").trim();
+  const nextDate = String(formData.get("next_date") || "").trim();
+  const nextRemark = String(formData.get("next_remark") || "").trim();
+
+  if (nextDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) {
+    return { error: "Pick a valid next follow-up date." };
+  }
 
   const supabase = await createClient();
-  const trimmed = outcome?.trim();
-  if (trimmed) {
-    const { data: existing } = await supabase
+
+  // Book the next call first: if this fails we don't want a closed follow-up
+  // with no successor (that's how a parent gets forgotten).
+  let nextId: string | null = null;
+  if (nextDate) {
+    const { data: created, error: nextErr } = await supabase
       .from("follow_ups")
-      .select("remark")
-      .eq("id", followUpId)
+      .insert({
+        applicant_id: applicantId,
+        staff_id: ctx.staffId,
+        due_date: nextDate,
+        remark: nextRemark || null,
+      })
+      .select("id")
       .single();
-    const merged = existing?.remark
-      ? `${existing.remark}\nOutcome: ${trimmed}`
-      : `Outcome: ${trimmed}`;
-    await supabase
-      .from("follow_ups")
-      .update({ status: "Done", resolved_at: new Date().toISOString(), remark: merged })
-      .eq("id", followUpId);
-  } else {
-    await supabase
-      .from("follow_ups")
-      .update({ status: "Done", resolved_at: new Date().toISOString() })
-      .eq("id", followUpId);
+    if (nextErr || !created) {
+      return { error: "Could not schedule the next follow-up." };
+    }
+    nextId = created.id;
   }
+
+  const { error } = await supabase
+    .from("follow_ups")
+    .update({
+      status: "Done",
+      resolved_at: new Date().toISOString(),
+      resolved_by: ctx.staffId,
+      outcome: outcome || null,
+      outcome_tag: outcomeTag || null,
+      next_follow_up_id: nextId,
+    })
+    .eq("id", followUpId);
+  if (error) return { error: "Could not save the outcome." };
 
   await logActivity({
     instituteId: ctx.institute.id,
     applicantId,
     staffId: ctx.staffId,
-    actionType: "follow_up_resolved",
-    description: "Follow-up marked done",
+    actionType: "follow_up_completed",
+    description: nextDate
+      ? `Follow-up completed${outcomeTag ? ` (${outcomeTag})` : ""} — next on ${nextDate}`
+      : `Follow-up completed${outcomeTag ? ` (${outcomeTag})` : ""}`,
   });
 
   refresh(applicantId);
+  return { error: null };
+}
+
+/** Move a pending follow-up to a different date (parent asked to postpone). */
+export async function rescheduleFollowUp(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const ctx = await getPortalContext();
+  if (ctx.role === "Viewer") return { error: "You don't have permission." };
+
+  const followUpId = String(formData.get("follow_up_id") || "");
+  const applicantId = String(formData.get("applicant_id") || "");
+  const dueDate = String(formData.get("due_date") || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    return { error: "Pick a valid date." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("follow_ups")
+    .update({ due_date: dueDate })
+    .eq("id", followUpId)
+    .eq("status", "Pending");
+  if (error) return { error: "Could not reschedule." };
+
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId,
+    staffId: ctx.staffId,
+    actionType: "follow_up_rescheduled",
+    description: `Follow-up moved to ${dueDate}`,
+  });
+
+  refresh(applicantId);
+  return { error: null };
 }
 
 /** Delete a follow-up entered in error. */
