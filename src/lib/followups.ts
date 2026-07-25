@@ -35,7 +35,11 @@ export type FollowUpRow = {
   resolved_at: string | null;
   created_at: string;
   applicant_id: string;
+  outcome: string | null;
+  outcome_tag: string | null;
+  next_follow_up_id: string | null;
   staff: { name: string } | null;
+  resolved_by_staff: { name: string } | null;
   applicants: {
     id: string;
     form_data: Record<string, unknown> | null;
@@ -63,7 +67,7 @@ export async function fetchSessionFollowUps(
   const { data } = await supabase
     .from("follow_ups")
     .select(
-      `id, due_date, remark, status, resolved_at, created_at, applicant_id, staff(name), ${APPLICANT_EMBED}`,
+      `id, due_date, remark, status, resolved_at, created_at, applicant_id, outcome, outcome_tag, next_follow_up_id, staff:staff_id(name), resolved_by_staff:resolved_by(name), ${APPLICANT_EMBED}`,
     )
     .eq("applicants.session_id", sessionId)
     .order("due_date", { ascending: true });

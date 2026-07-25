@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Phone,
@@ -10,9 +10,13 @@ import {
   ArrowUpRight,
   Users2,
 } from "lucide-react";
-import { resolveFollowUp } from "@/app/(portal)/applicants/[id]/actions";
 import DatePicker from "@/components/ui/DatePicker";
 import Select from "@/components/ui/Select";
+import {
+  CompleteFollowUpDialog,
+  RescheduleDialog,
+  FollowUpDetailDialog,
+} from "@/components/portal/FollowUpDialogs";
 
 export type FollowUpItem = {
   id: string;
@@ -30,6 +34,10 @@ export type FollowUpItem = {
   status: string;
   resolvedAt: string | null;
   staffName: string | null;
+  outcome: string | null;
+  outcomeTag: string | null;
+  nextFollowUpId: string | null;
+  resolvedByName: string | null;
 };
 
 const TABS = [
@@ -37,6 +45,7 @@ const TABS = [
   { key: "upcoming", label: "Upcoming" },
   { key: "overdue", label: "Overdue" },
   { key: "month", label: "This month" },
+  { key: "history", label: "History" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -114,8 +123,10 @@ export default function FollowUpsView({
   canEdit: boolean;
 }) {
   const [tab, setTab] = useState<TabKey>(initialTab);
-  const [busy, startBusy] = useTransition();
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [completing, setCompleting] = useState<FollowUpItem | null>(null);
+  const [rescheduling, setRescheduling] = useState<FollowUpItem | null>(null);
+  const [viewing, setViewing] = useState<FollowUpItem | null>(null);
   const [day, setDay] = useState(today);
   const [mMonth, setMMonth] = useState(today.slice(5, 7));
   const [mYear, setMYear] = useState(today.slice(0, 4));
@@ -133,16 +144,29 @@ export default function FollowUpsView({
 
   function inBucket(it: FollowUpItem, t: TabKey) {
     const pending = it.status !== "Done";
-    if (t === "today") return it.dueDate === today;
+    if (t === "today") return pending && it.dueDate === today;
     if (t === "upcoming") return pending && it.dueDate > today;
     if (t === "overdue") return pending && it.dueDate < today;
+    if (t === "history") return it.status === "Done";
     return pending && it.dueDate >= monthStart && it.dueDate <= today;
   }
 
   // Tab badges count DISTINCT families/applicants (matches the dashboard tiles).
   const counts = useMemo(() => {
-    const c: Record<TabKey, number> = { today: 0, upcoming: 0, overdue: 0, month: 0 };
-    for (const t of ["today", "upcoming", "overdue", "month"] as TabKey[]) {
+    const c: Record<TabKey, number> = {
+      today: 0,
+      upcoming: 0,
+      overdue: 0,
+      month: 0,
+      history: 0,
+    };
+    for (const t of [
+      "today",
+      "upcoming",
+      "overdue",
+      "month",
+      "history",
+    ] as TabKey[]) {
       c[t] = new Set(items.filter((i) => inBucket(i, t)).map(keyOf)).size;
     }
     return c;
@@ -152,7 +176,12 @@ export default function FollowUpsView({
   const groups = useMemo(() => {
     const filtered = items
       .filter((it) => inBucket(it, tab))
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+      // History reads newest-first; open work reads soonest-first.
+      .sort((a, b) =>
+        tab === "history"
+          ? b.dueDate.localeCompare(a.dueDate)
+          : a.dueDate.localeCompare(b.dueDate),
+      );
     return groupByFamily(filtered);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, tab, today, monthStart]);
@@ -318,7 +347,9 @@ export default function FollowUpsView({
                   ? "No follow-ups scheduled ahead."
                   : tab === "overdue"
                     ? "Nothing overdue — you're all caught up."
-                    : "No pending follow-ups this month."}
+                    : tab === "history"
+                      ? "No completed follow-ups yet."
+                      : "No pending follow-ups this month."}
             </p>
           </div>
         ) : (
@@ -389,23 +420,39 @@ export default function FollowUpsView({
                                 · {f.name}
                               </Link>
                             )}
-                            {canEdit && !done && (
-                              <button
-                                onClick={() =>
-                                  startBusy(() =>
-                                    resolveFollowUp(f.id, f.applicantId),
-                                  )
-                                }
-                                disabled={busy}
-                                className="ml-auto rounded-md px-2 py-0.5 text-[11.5px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:opacity-40"
-                              >
-                                Mark done
-                              </button>
+                            {f.outcomeTag && (
+                              <span className="badge badge-accent">
+                                {f.outcomeTag}
+                              </span>
                             )}
+                            <div className="ml-auto flex items-center gap-1">
+                              <button
+                                onClick={() => setViewing(f)}
+                                className="rounded-md px-2 py-0.5 text-[11.5px] text-muted-strong transition-colors hover:text-foreground"
+                              >
+                                View
+                              </button>
+                              {canEdit && !done && (
+                                <>
+                                  <button
+                                    onClick={() => setRescheduling(f)}
+                                    className="rounded-md px-2 py-0.5 text-[11.5px] text-muted-strong transition-colors hover:text-foreground"
+                                  >
+                                    Reschedule
+                                  </button>
+                                  <button
+                                    onClick={() => setCompleting(f)}
+                                    className="rounded-md px-2 py-0.5 text-[11.5px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/10"
+                                  >
+                                    Mark done
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          {f.remark && (
-                            <p className="mt-1 whitespace-pre-wrap text-[12.5px] text-muted-strong">
-                              {f.remark}
+                          {(f.outcome || f.remark) && (
+                            <p className="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-[12.5px] text-muted-strong">
+                              {f.outcome || f.remark}
                             </p>
                           )}
                         </div>
@@ -440,6 +487,53 @@ export default function FollowUpsView({
           ))
         )}
       </div>
+
+      {/* Dialogs */}
+      {completing && (
+        <CompleteFollowUpDialog
+          open
+          onClose={() => setCompleting(null)}
+          followUp={{
+            id: completing.id,
+            due_date: completing.dueDate,
+            remark: completing.remark,
+            status: completing.status,
+          }}
+          applicantId={completing.applicantId}
+          today={today}
+        />
+      )}
+      {rescheduling && (
+        <RescheduleDialog
+          open
+          onClose={() => setRescheduling(null)}
+          followUp={{
+            id: rescheduling.id,
+            due_date: rescheduling.dueDate,
+            remark: rescheduling.remark,
+            status: rescheduling.status,
+          }}
+          applicantId={rescheduling.applicantId}
+          today={today}
+        />
+      )}
+      {viewing && (
+        <FollowUpDetailDialog
+          open
+          onClose={() => setViewing(null)}
+          followUp={{
+            id: viewing.id,
+            due_date: viewing.dueDate,
+            remark: viewing.remark,
+            status: viewing.status,
+            outcome: viewing.outcome,
+            outcome_tag: viewing.outcomeTag,
+            resolved_at: viewing.resolvedAt,
+            staffName: viewing.staffName,
+            resolvedByName: viewing.resolvedByName,
+          }}
+        />
+      )}
     </div>
   );
 }

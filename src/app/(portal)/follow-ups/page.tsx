@@ -80,6 +80,10 @@ export default async function FollowUpsPage({
     status: r.status,
     resolvedAt: r.resolved_at,
     staffName: r.staff?.name ?? null,
+    outcome: r.outcome,
+    outcomeTag: r.outcome_tag,
+    nextFollowUpId: r.next_follow_up_id,
+    resolvedByName: r.resolved_by_staff?.name ?? null,
   }));
 
   return (

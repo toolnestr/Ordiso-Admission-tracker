@@ -120,7 +120,7 @@ export default async function ApplicantDetailPage({
       supabase
         .from("follow_ups")
         .select(
-          "id, due_date, remark, status, resolved_at, created_at, applicant_id, staff(name)",
+          "id, due_date, remark, status, resolved_at, created_at, applicant_id, outcome, outcome_tag, next_follow_up_id, staff:staff_id(name), resolved_by_staff:resolved_by(name)",
         )
         // Family members share a parent/contact, so a follow-up on any sibling
         // shows on every sibling's tab — you don't call the same parent twice.

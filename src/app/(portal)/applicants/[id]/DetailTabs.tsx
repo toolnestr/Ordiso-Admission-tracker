@@ -13,6 +13,9 @@ import {
   FileText,
   Download,
   CalendarClock,
+  Undo2,
+  CalendarPlus,
+  Eye,
 } from "lucide-react";
 import {
   addFee,
@@ -21,16 +24,21 @@ import {
   editPayment,
   deletePayment,
   waiveFee,
+  unwaiveFee,
   uploadDocument,
   deleteDocument,
   addNote,
   deleteNote,
   addCommunication,
   addFollowUp,
-  resolveFollowUp,
   deleteFollowUp,
   type ActionState,
 } from "./actions";
+import {
+  CompleteFollowUpDialog,
+  RescheduleDialog,
+  FollowUpDetailDialog,
+} from "@/components/portal/FollowUpDialogs";
 import Select from "@/components/ui/Select";
 import DatePicker from "@/components/ui/DatePicker";
 import type { StaffRole } from "@/lib/portal";
@@ -82,6 +90,10 @@ type FollowUp = {
   staff: { name: string } | null;
   applicant_id: string;
   applicantName?: string;
+  outcome: string | null;
+  outcome_tag: string | null;
+  next_follow_up_id: string | null;
+  resolved_by_staff?: { name: string } | null;
 };
 
 const initial: ActionState = { error: null };
@@ -422,8 +434,19 @@ function FeeCard({
           </div>
         </div>
 
+        {canEdit && waived && role === "Admin" && (
+          <button
+            onClick={() => startWaive(() => unwaiveFee(fee.id, applicantId))}
+            disabled={waiving}
+            className="surface-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-medium text-muted-strong transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            <Undo2 className="h-3.5 w-3.5" strokeWidth={1.8} />
+            {waiving ? "Undoing…" : "Undo waive"}
+          </button>
+        )}
+
         {canEdit && !settled && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowPay((v) => !v)}
               className="surface-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors hover:bg-[var(--border)]"
@@ -745,6 +768,13 @@ function FollowUpsTab({
   const todayYmd = new Date().toLocaleDateString("en-CA");
   const [date, setDate] = useState(todayYmd);
 
+  const [completing, setCompleting] = useState<FollowUp | null>(null);
+  const [rescheduling, setRescheduling] = useState<FollowUp | null>(null);
+  const [viewing, setViewing] = useState<FollowUp | null>(null);
+
+  const open = followUps.filter((f) => f.status !== "Done");
+  const history = followUps.filter((f) => f.status === "Done");
+
   return (
     <div className="space-y-4">
       {familyLabel && (
@@ -789,89 +819,160 @@ function FollowUpsTab({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-lg bg-foreground px-4 py-2 text-[13px] font-medium text-background disabled:opacity-50"
+            className="w-full rounded-lg bg-foreground px-4 py-2.5 text-[13px] font-medium text-background disabled:opacity-50 sm:w-auto"
           >
             {pending ? "Saving…" : "Schedule follow-up"}
           </button>
         </form>
       )}
 
-      {followUps.length === 0 ? (
-        <Empty text="No follow-ups scheduled." />
+      {/* Open follow-ups */}
+      {open.length === 0 ? (
+        <Empty text="No open follow-ups." />
       ) : (
-        followUps.map((f) => {
-          const done = f.status === "Done";
-          const overdue = !done && f.due_date < todayYmd;
-          // In a family, show which sibling the follow-up was logged on.
-          const forOther = familyLabel && f.applicant_id !== applicantId;
-          return (
-            <div key={f.id} className="surface rounded-xl p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <CalendarClock
-                      className="h-4 w-4 text-muted"
-                      strokeWidth={1.7}
-                    />
-                    <span className="text-[13.5px] font-medium">
-                      {fmtDate(f.due_date)}
-                    </span>
-                    {done ? (
-                      <span className="badge badge-green">Done</span>
-                    ) : overdue ? (
-                      <span className="badge badge-red">Overdue</span>
-                    ) : (
-                      <span className="badge badge-amber">Pending</span>
-                    )}
-                    {forOther && f.applicantName && (
-                      <span className="text-[11.5px] text-muted">
-                        · logged on {f.applicantName}
-                      </span>
-                    )}
-                  </div>
-                  {f.remark && (
-                    <p className="mt-2 whitespace-pre-wrap text-[13.5px]">
-                      {f.remark}
-                    </p>
+        <div className="space-y-2.5">
+          {open.map((f) => {
+            const overdue = f.due_date < todayYmd;
+            const forOther = familyLabel && f.applicant_id !== applicantId;
+            return (
+              <div key={f.id} className="surface rounded-xl p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CalendarClock className="h-4 w-4 text-muted" strokeWidth={1.7} />
+                  <span className="text-[13.5px] font-medium">
+                    {fmtDate(f.due_date)}
+                  </span>
+                  {overdue ? (
+                    <span className="badge badge-red">Overdue</span>
+                  ) : (
+                    <span className="badge badge-amber">Pending</span>
                   )}
-                  <div className="mt-2 text-[12px] text-muted">
-                    {f.staff?.name ?? "Unknown"}
-                    {done && f.resolved_at
-                      ? ` · done ${when(f.resolved_at)}`
-                      : ""}
-                  </div>
+                  {forOther && f.applicantName && (
+                    <span className="text-[11.5px] text-muted">
+                      · {f.applicantName}
+                    </span>
+                  )}
                 </div>
-                {canEdit && (
-                  <div className="flex shrink-0 items-center gap-1">
-                    {!done && (
+
+                {f.remark && (
+                  <p className="mt-2 line-clamp-2 whitespace-pre-wrap break-words text-[13.5px]">
+                    {f.remark}
+                  </p>
+                )}
+
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px] text-muted">
+                  <span>{f.staff?.name ?? "Unknown"}</span>
+                  <button
+                    onClick={() => setViewing(f)}
+                    className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-muted-strong transition-colors hover:text-foreground"
+                  >
+                    <Eye className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    View
+                  </button>
+                  {canEdit && (
+                    <>
                       <button
-                        onClick={() =>
-                          startBusy(() =>
-                            resolveFollowUp(f.id, f.applicant_id),
-                          )
-                        }
-                        disabled={busy}
-                        className="rounded-md px-2 py-1 text-[12px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/10 disabled:opacity-40"
+                        onClick={() => setRescheduling(f)}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-muted-strong transition-colors hover:text-foreground"
+                      >
+                        <CalendarPlus className="h-3.5 w-3.5" strokeWidth={1.8} />
+                        Reschedule
+                      </button>
+                      <button
+                        onClick={() => setCompleting(f)}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-medium text-emerald-400 transition-colors hover:bg-emerald-500/10"
                       >
                         Mark done
                       </button>
-                    )}
-                    <button
-                      onClick={() =>
-                        startBusy(() => deleteFollowUp(f.id, f.applicant_id))
-                      }
-                      disabled={busy}
-                      aria-label="Delete follow-up"
-                      className="rounded-md p-1 text-muted transition-colors hover:text-red-400 disabled:opacity-40"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
+                      <button
+                        onClick={() =>
+                          startBusy(() => deleteFollowUp(f.id, f.applicant_id))
+                        }
+                        disabled={busy}
+                        aria-label="Delete follow-up"
+                        className="rounded-md p-1 text-muted transition-colors hover:text-red-400 disabled:opacity-40"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })
+            );
+          })}
+        </div>
+      )}
+
+      {/* History — the record of every call already made */}
+      {history.length > 0 && (
+        <div className="pt-2">
+          <h4 className="mb-2 text-[12px] font-medium uppercase tracking-wide text-muted">
+            History ({history.length})
+          </h4>
+          <div className="space-y-2">
+            {history.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setViewing(f)}
+                className="surface block w-full rounded-xl p-3.5 text-left transition-colors hover:border-border-strong"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[13px] font-medium">
+                    {fmtDate(f.due_date)}
+                  </span>
+                  <span className="badge badge-green">Done</span>
+                  {f.outcome_tag && (
+                    <span className="badge badge-accent">{f.outcome_tag}</span>
+                  )}
+                  {f.next_follow_up_id && (
+                    <span className="text-[11.5px] text-accent">
+                      · rescheduled
+                    </span>
+                  )}
+                </div>
+                {(f.outcome || f.remark) && (
+                  <p className="mt-1.5 line-clamp-2 whitespace-pre-wrap break-words text-[13px] text-muted-strong">
+                    {f.outcome || f.remark}
+                  </p>
+                )}
+                <div className="mt-1.5 text-[11.5px] text-muted">
+                  {f.resolved_by_staff?.name ?? f.staff?.name ?? "Unknown"}
+                  {f.resolved_at ? ` · ${when(f.resolved_at)}` : ""}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dialogs */}
+      {completing && (
+        <CompleteFollowUpDialog
+          open
+          onClose={() => setCompleting(null)}
+          followUp={completing}
+          applicantId={completing.applicant_id}
+          today={todayYmd}
+        />
+      )}
+      {rescheduling && (
+        <RescheduleDialog
+          open
+          onClose={() => setRescheduling(null)}
+          followUp={rescheduling}
+          applicantId={rescheduling.applicant_id}
+          today={todayYmd}
+        />
+      )}
+      {viewing && (
+        <FollowUpDetailDialog
+          open
+          onClose={() => setViewing(null)}
+          followUp={{
+            ...viewing,
+            staffName: viewing.staff?.name ?? null,
+            resolvedByName: viewing.resolved_by_staff?.name ?? null,
+          }}
+        />
       )}
     </div>
   );
