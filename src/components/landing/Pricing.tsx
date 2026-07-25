@@ -264,7 +264,7 @@ function ContactModal({
                 </div>
               </a>
               <a
-                href="https://wa.me/0000000000"
+                href="https://wa.me/923068977463"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="surface flex items-center gap-3 rounded-xl p-3.5 transition-colors hover:border-border-strong"
@@ -274,7 +274,7 @@ function ContactModal({
                 </span>
                 <div>
                   <div className="text-[13.5px] font-medium">WhatsApp</div>
-                  <div className="text-xs text-muted">Chat with our team</div>
+                  <div className="text-xs text-muted">+92 306 8977463</div>
                 </div>
               </a>
             </div>
