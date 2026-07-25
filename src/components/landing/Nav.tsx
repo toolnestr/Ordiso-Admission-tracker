@@ -31,7 +31,7 @@ export default function Nav() {
             : "border border-transparent"
         }`}
       >
-        <a href="#top" className="flex items-center gap-2.5">
+        <a href="/" className="flex items-center gap-2.5">
           <Logo />
           <span className="text-[15px] font-semibold tracking-tight">
             Ordiso
