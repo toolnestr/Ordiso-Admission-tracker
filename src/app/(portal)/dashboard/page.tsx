@@ -158,9 +158,13 @@ export default async function DashboardPage() {
     }))
     .filter((d) => d.value > 0);
 
-  const sourceSlices = ["QR", "Direct", "Shared"]
-    .map((s) => ({ label: s, value: cur.bySource[s] ?? 0, color: sourceColor(s) }))
-    .filter((d) => d.value > 0);
+  // Two buckets: staff-added ("Manual") vs everything from the public form.
+  const manualCount = cur.bySource["Manual"] ?? 0;
+  const formCount = cur.total - manualCount;
+  const sourceSlices = [
+    { label: "QR / Link", value: formCount, color: sourceColor("QR / Link") },
+    { label: "Manual", value: manualCount, color: sourceColor("Manual") },
+  ].filter((d) => d.value > 0);
 
   return (
     <div>

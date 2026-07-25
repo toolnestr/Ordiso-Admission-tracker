@@ -49,16 +49,28 @@ export function stageColor(stage: string): string {
 }
 
 /**
- * Source is genuinely categorical (QR / Direct / Shared — no order) and only
- * needs three well-separated hues. Validated categorical: worst adjacent
- * ΔE 27.6, all clear 3:1.
+ * Source has two real buckets: public form ("QR / Link", stored as 'Direct')
+ * and staff-added ("Manual"). Legacy 'QR'/'Shared' values (never actually set)
+ * fold into "QR / Link".
  */
-export const SOURCE_COLORS: Record<string, string> = {
-  QR: "#3987e5",
-  Direct: "#d95926",
-  Shared: "#199e70",
+export const SOURCE_LABELS: Record<string, string> = {
+  Manual: "Manual",
+  Direct: "QR / Link",
+  QR: "QR / Link",
+  Shared: "QR / Link",
 };
 
-export function sourceColor(src: string): string {
-  return SOURCE_COLORS[src] ?? CONTEXT;
+/** Display name for a raw applicant.source enum value. */
+export function sourceLabel(src: string): string {
+  return SOURCE_LABELS[src] ?? "QR / Link";
+}
+
+const SOURCE_LABEL_COLORS: Record<string, string> = {
+  "QR / Link": "#3987e5",
+  Manual: "#d95926",
+};
+
+/** Color keyed by the DISPLAY label ("QR / Link" | "Manual"). */
+export function sourceColor(label: string): string {
+  return SOURCE_LABEL_COLORS[label] ?? CONTEXT;
 }

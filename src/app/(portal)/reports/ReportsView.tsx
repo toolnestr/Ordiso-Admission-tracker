@@ -61,9 +61,12 @@ export default function ReportsView({
     .map((s) => ({ label: s, value: current.byStatus[s] ?? 0 }))
     .filter((d) => d.value > 0);
 
-  const sourceData = ["QR", "Direct", "Shared"]
-    .map((s) => ({ label: s, value: current.bySource[s] ?? 0 }))
-    .filter((d) => d.value > 0);
+  // Two buckets: staff-added ("Manual") vs everything from the public form.
+  const manualCount = current.bySource["Manual"] ?? 0;
+  const sourceData = [
+    { label: "QR / Link", value: current.total - manualCount },
+    { label: "Manual", value: manualCount },
+  ].filter((d) => d.value > 0);
 
   // Cumulative "reached at least this stage" so the funnel is monotonic even
   // though stages are skippable (a walk-in can jump straight to Admitted).

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Phone, MessageCircle, Users2 } from "lucide-react";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
+import { sourceLabel } from "@/components/charts/palette";
 import StatusControl from "./StatusControl";
 import DetailTabs from "./DetailTabs";
 import EmailButton from "./EmailButton";
@@ -217,7 +218,7 @@ export default async function ApplicantDetailPage({
               })}
             </span>
             <span>·</span>
-            <span>via {applicant.source}</span>
+            <span>via {sourceLabel(applicant.source)}</span>
             {program?.name && (
               <>
                 <span>·</span>

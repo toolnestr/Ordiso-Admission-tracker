@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FileText, ChevronDown } from "lucide-react";
+import { sourceLabel } from "@/components/charts/palette";
 import type { SessionMeta, Totals } from "./page";
 
 export type ReportRow = {
@@ -226,7 +227,7 @@ export default function ReportPdf({
             nameOf(r),
             programOf(r),
             r.status,
-            r.source,
+            sourceLabel(r.source),
             d(r.created_at),
           ]),
         });
