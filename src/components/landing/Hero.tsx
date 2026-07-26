@@ -36,7 +36,7 @@ export default function Hero() {
         className="surface group mb-7 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12.5px] text-muted-strong transition-colors hover:text-foreground"
       >
         <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-        100 students free every admission session
+        Free: 100 students &times; 2 sessions every year
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
       </motion.a>
 
