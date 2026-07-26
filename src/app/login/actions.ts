@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export type LoginState = { error: string | null };
@@ -27,6 +28,20 @@ export async function login(
   if (error || !data.user) {
     return { error: "Incorrect email or password." };
   }
+
+  // "Remember me": record the choice in a cookie the middleware reads. When
+  // unchecked, the middleware downgrades the Supabase auth cookies to
+  // session-only so closing the browser signs the user out.
+  const remember = formData.get("remember") != null;
+  const cookieStore = await cookies();
+  cookieStore.set("remember_me", remember ? "1" : "0", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    // The flag itself is session-scoped when not remembering, persistent when.
+    ...(remember ? { maxAge: 60 * 60 * 24 * 365 } : {}),
+  });
 
   // Where to land depends on which role table the user actually belongs to —
   // /dashboard requires a `staff` row and /admin requires a `super_admins`

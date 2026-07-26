@@ -18,13 +18,21 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
+          // "Remember me" unchecked → keep the auth cookies session-scoped so
+          // they clear when the browser closes. Strip maxAge/expires from the
+          // sb-* auth cookies on every refresh (this runs each request).
+          const persist = request.cookies.get("remember_me")?.value !== "0";
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
           response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const opts =
+              !persist && name.startsWith("sb-")
+                ? { ...options, maxAge: undefined, expires: undefined }
+                : options;
+            response.cookies.set(name, value, opts);
+          });
         },
       },
     },
