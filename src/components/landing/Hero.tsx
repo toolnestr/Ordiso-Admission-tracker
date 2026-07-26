@@ -116,6 +116,16 @@ function DashboardMockup() {
     { label: "Admitted", pct: 31 },
     { label: "Confirmed", pct: 24 },
   ];
+  const recent = [
+    { name: "Aisha Khan", program: "FSc Pre-Medical", status: "Shortlisted" },
+    { name: "Bilal Ahmed", program: "ICS Physics", status: "Interview" },
+    { name: "Sara Malik", program: "FSc Pre-Eng", status: "Admitted" },
+  ];
+  const statusTint: Record<string, string> = {
+    Shortlisted: "bg-accent-soft text-accent",
+    Interview: "bg-amber-500/10 text-amber-300",
+    Admitted: "bg-emerald-500/10 text-emerald-300",
+  };
 
   return (
     <div className="rounded-lg bg-[#0b0b0f] p-4 text-left">
@@ -166,6 +176,38 @@ function DashboardMockup() {
               </div>
               <span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-muted">
                 {f.pct}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="surface mt-2.5 rounded-lg p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-[11px] text-muted">Recent applications</span>
+          <span className="text-[10.5px] text-accent">View all</span>
+        </div>
+        <div className="space-y-2">
+          {recent.map((r) => (
+            <div key={r.name} className="flex items-center gap-3">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/[0.06] text-[10px] font-medium text-muted-strong">
+                {r.name
+                  .split(" ")
+                  .map((p) => p[0])
+                  .join("")}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[11.5px] text-foreground">
+                  {r.name}
+                </div>
+                <div className="truncate text-[10px] text-muted">
+                  {r.program}
+                </div>
+              </div>
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[9.5px] font-medium ${statusTint[r.status]}`}
+              >
+                {r.status}
               </span>
             </div>
           ))}
