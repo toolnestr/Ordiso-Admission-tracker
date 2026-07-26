@@ -22,9 +22,17 @@ export default async function SessionsPage() {
     .select(
       "id, name, start_date, end_date, status, total_applications_received, target_goal, created_at",
     )
-    .order("start_date", { ascending: false });
+    .order("created_at", { ascending: false });
 
-  const list = sessions ?? [];
+  // Newest session is always #1 (by creation), and any Open session floats to
+  // the very top so the active one is easy to find in a long list.
+  const list = (sessions ?? [])
+    .slice()
+    .sort(
+      (a, b) =>
+        (b.status === "Open" ? 1 : 0) - (a.status === "Open" ? 1 : 0) ||
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
   const hasOpen = list.some((s) => s.status === "Open");
 
   // Free-tier yearly session quota (mirrors createSession / the DB trigger).
