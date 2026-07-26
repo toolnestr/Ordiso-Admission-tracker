@@ -10,9 +10,15 @@ const initial: SessionActionState = { error: null };
 export default function NewSessionForm({
   hasOpen,
   quotaReached = false,
+  freeLimited = false,
+  sessionsThisYear = 0,
+  limit = 2,
 }: {
   hasOpen: boolean;
   quotaReached?: boolean;
+  freeLimited?: boolean;
+  sessionsThisYear?: number;
+  limit?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -115,6 +121,18 @@ export default function NewSessionForm({
             className="surface-2 mt-1.5 block w-full rounded-lg px-3 py-2.5 text-[14px] outline-none focus:border-border-strong"
           />
         </label>
+
+        {freeLimited && (
+          <div className="flex items-start gap-2 rounded-lg border border-accent-soft bg-accent-soft px-3 py-2.5 text-[13px] text-accent sm:col-span-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Free plan: you can open <strong>{limit}</strong> admission session
+              {limit === 1 ? "" : "s"} per year ({sessionsThisYear} of {limit}{" "}
+              used in {new Date().getFullYear()}). Creating this uses one — once
+              they&apos;re used up you can&apos;t open another until next year.
+            </span>
+          </div>
+        )}
 
         {state.error && (
           <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-[13px] text-red-300 sm:col-span-2">

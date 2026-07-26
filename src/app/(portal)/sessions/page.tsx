@@ -68,7 +68,13 @@ export default async function SessionsPage() {
 
       {ctx.role === "Admin" && (
         <div className="mt-6">
-          <NewSessionForm hasOpen={hasOpen} quotaReached={quotaReached} />
+          <NewSessionForm
+            hasOpen={hasOpen}
+            quotaReached={quotaReached}
+            freeLimited={freeLimited}
+            sessionsThisYear={sessionsThisYear}
+            limit={FREE_SESSIONS_PER_YEAR}
+          />
         </div>
       )}
 
