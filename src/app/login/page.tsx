@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Check } from "lucide-react";
 import AuthShell from "@/components/auth/AuthShell";
 import Field from "@/components/auth/Field";
 import { login, type LoginState } from "./actions";
@@ -41,12 +41,20 @@ export default function LoginPage() {
 
         <div className="flex items-center justify-between">
           <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted transition-colors hover:text-foreground">
-            <input
-              type="checkbox"
-              name="remember"
-              defaultChecked
-              className="h-3.5 w-3.5 rounded border-border bg-surface-2 accent-[var(--accent)]"
-            />
+            {/* Custom box (appearance-none) so it renders identically on mobile
+                — a native checkbox is near-invisible on the dark background. */}
+            <span className="relative flex h-4 w-4 items-center justify-center">
+              <input
+                type="checkbox"
+                name="remember"
+                defaultChecked
+                className="peer h-4 w-4 cursor-pointer appearance-none rounded border border-border-strong bg-surface-2 transition-colors checked:border-accent checked:bg-accent"
+              />
+              <Check
+                className="pointer-events-none absolute h-3 w-3 text-white opacity-0 peer-checked:opacity-100"
+                strokeWidth={3}
+              />
+            </span>
             Remember me
           </label>
           <Link
