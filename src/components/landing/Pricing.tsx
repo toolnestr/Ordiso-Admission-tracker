@@ -26,7 +26,7 @@ const tiers: Tier[] = [
     tagline: "Run a full admission session, free.",
     features: [
       "100 students per session",
-      "2 admission sessions / year",
+      "2 admission sessions per year",
       "Custom form builder",
       "Public link & QR code",
       "Full dashboard & analytics",
