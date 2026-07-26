@@ -3,20 +3,37 @@ import { Mail, Clock } from "lucide-react";
 import Nav from "@/components/landing/Nav";
 import Footer from "@/components/landing/Footer";
 import ContactForm from "@/components/landing/ContactForm";
+import JsonLd from "@/components/seo/JsonLd";
+import { contactJsonLd } from "@/lib/seo";
+
+const CONTACT_DESCRIPTION =
+  "Get in touch with the Ordiso team. Questions about admissions management, pricing, or your institute account — we're happy to help.";
 
 // A real marketing page — opt back into indexing (the root layout defaults to
-// noindex) with a self-referencing canonical.
+// noindex) with a self-referencing canonical. Title is the bare page name; the
+// root layout's template appends "— Ordiso".
 export const metadata: Metadata = {
-  title: "Contact us — Ordiso",
-  description:
-    "Get in touch with the Ordiso team. Questions about admissions management, pricing, or your institute account — we're happy to help.",
+  title: "Contact us",
+  description: CONTACT_DESCRIPTION,
   alternates: { canonical: "/contact" },
   robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    title: "Contact us — Ordiso",
+    description: CONTACT_DESCRIPTION,
+    url: "/contact",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Contact us — Ordiso",
+    description: CONTACT_DESCRIPTION,
+  },
 };
 
 export default function ContactPage() {
   return (
     <>
+      <JsonLd data={contactJsonLd()} />
       <Nav />
       <main className="flex-1">
         <section className="mx-auto max-w-4xl px-6 pb-16 pt-32 sm:pt-36">

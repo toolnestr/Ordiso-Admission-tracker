@@ -7,6 +7,8 @@ import Hero from "@/components/landing/Hero";
 import HowItWorks from "@/components/landing/HowItWorks";
 import Nav from "@/components/landing/Nav";
 import Pricing from "@/components/landing/Pricing";
+import JsonLd from "@/components/seo/JsonLd";
+import { homeJsonLd } from "@/lib/seo";
 import type { Metadata } from "next";
 
 // The only indexable page — overrides the root layout's noindex default and
@@ -19,6 +21,7 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <>
+      <JsonLd data={homeJsonLd()} />
       <Nav />
       <main className="flex-1">
         <Hero />
