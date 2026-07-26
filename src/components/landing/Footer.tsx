@@ -8,12 +8,18 @@ export default function Footer() {
           <Logo />
           <span className="text-[14px] font-semibold">Ordiso</span>
         </div>
-        <div className="flex items-center gap-5 text-[13px] text-muted">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] text-muted">
           <a href="/status" className="transition-colors hover:text-foreground">
             Track application
           </a>
           <a href="/contact" className="transition-colors hover:text-foreground">
             Contact
+          </a>
+          <a href="/privacy" className="transition-colors hover:text-foreground">
+            Privacy
+          </a>
+          <a href="/terms" className="transition-colors hover:text-foreground">
+            Terms
           </a>
           <a href="/login" className="transition-colors hover:text-foreground">
             Institute login
