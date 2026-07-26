@@ -282,8 +282,9 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            {/* Cap + conversion + quick actions */}
-            <div className="space-y-4">
+            {/* Cap + conversion + quick actions — excluded from the shared
+                screenshot (not useful in an exported/shared image). */}
+            <div className="space-y-4" data-screenshot-exclude>
               {ctx.institute.plan === "Free" && (
                 <Card title="Free tier usage">
                   <div className="flex items-baseline justify-between">
