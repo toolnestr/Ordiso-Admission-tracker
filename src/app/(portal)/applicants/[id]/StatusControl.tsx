@@ -91,7 +91,8 @@ export default function StatusControl({
       {showReject && canEdit && (
         <div className="mt-3 border-t border-border pt-3">
           <span className="text-[12.5px] text-muted-strong">
-            Reason for rejection (optional — appears on the rejection report)
+            Reason for rejection <span className="text-accent">*</span> —
+            required, appears on the rejection report
           </span>
           <textarea
             value={rejectReason}
@@ -108,8 +109,9 @@ export default function StatusControl({
                   setShowReject(false);
                 })
               }
-              disabled={pending}
-              className="rounded-lg bg-red-500/90 px-3.5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              disabled={pending || !rejectReason.trim()}
+              title={!rejectReason.trim() ? "Enter a reason to reject" : undefined}
+              className="rounded-lg bg-red-500/90 px-3.5 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {pending ? "Rejecting…" : "Reject applicant"}
             </button>

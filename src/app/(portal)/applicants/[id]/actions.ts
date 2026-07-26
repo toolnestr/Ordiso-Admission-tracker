@@ -47,6 +47,10 @@ export async function updateStatus(
   // confirm actions so a reason is recorded (Section 2.4).
   if (status === "Confirmed" || status === "Confirmed-Partial") return;
 
+  // A rejection reason is mandatory — the UI enforces it too, this is the
+  // server-side guard against an empty reason slipping through.
+  if (status === "Rejected" && !reason?.trim()) return;
+
   const supabase = await createClient();
   const { data: before } = await supabase
     .from("applicants")

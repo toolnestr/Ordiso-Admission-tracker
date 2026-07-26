@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Share2 } from "lucide-react";
+import { Users, Share2, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
 import NewEnquiry from "./NewEnquiry";
@@ -50,6 +50,11 @@ export default async function ApplicantsPage() {
     enquiryPrograms = (programRows ?? []) as { id: string; name: string }[];
   }
 
+  // A walk-in enquiry mirrors the public form, so there must be a form to fill.
+  // Without any fields you'd create an applicant with no information — block
+  // that and point to the form builder instead.
+  const hasForm = enquiryFields.length > 0;
+
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -64,14 +69,31 @@ export default async function ApplicantsPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          {canAddEnquiry && (
-            <NewEnquiry
-              instituteId={ctx.institute.id}
-              fields={enquiryFields}
-              programs={enquiryPrograms}
-              isPremium={ctx.features.uploads}
-            />
-          )}
+          {canAddEnquiry &&
+            (hasForm ? (
+              <NewEnquiry
+                instituteId={ctx.institute.id}
+                fields={enquiryFields}
+                programs={enquiryPrograms}
+                isPremium={ctx.features.uploads}
+              />
+            ) : ctx.role === "Admin" ? (
+              <Link
+                href="/form-builder"
+                className="inline-flex items-center gap-2 rounded-lg bg-foreground px-3.5 py-2 text-[13px] font-medium text-background transition-opacity hover:opacity-90"
+              >
+                <FileText className="h-4 w-4" strokeWidth={1.8} />
+                Build your form first
+              </Link>
+            ) : (
+              <span
+                title="An admin needs to set up the application form first"
+                className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg bg-foreground/40 px-3.5 py-2 text-[13px] font-medium text-background/70"
+              >
+                <FileText className="h-4 w-4" strokeWidth={1.8} />
+                Form not set up
+              </span>
+            ))}
           <Link
             href="/share"
             className="surface-2 inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-colors hover:bg-[var(--border)] sm:px-3.5 sm:py-2 sm:text-[13px]"
