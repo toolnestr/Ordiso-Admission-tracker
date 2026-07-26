@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { authCookieOptions } from "./rememberCookie";
 
 /**
  * Server Supabase client (RSC / Route Handlers / Server Actions).
@@ -19,8 +20,15 @@ export async function createClient() {
         },
         setAll(cookiesToSet) {
           try {
+            // Apply the "Remember me" lifetime to the sb-* auth cookies so a
+            // remembered login is persistent from the very first write.
+            const persist = cookieStore.get("remember_me")?.value !== "0";
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
+              cookieStore.set(
+                name,
+                value,
+                authCookieOptions(name, options, persist),
+              ),
             );
           } catch {
             // called from a Server Component — safe to ignore when middleware

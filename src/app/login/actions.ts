@@ -19,19 +19,9 @@ export async function login(
     return { error: "Please enter your email and password." };
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error || !data.user) {
-    return { error: "Incorrect email or password." };
-  }
-
-  // "Remember me": record the choice in a cookie the middleware reads. When
-  // unchecked, the middleware downgrades the Supabase auth cookies to
-  // session-only so closing the browser signs the user out.
+  // "Remember me": record the choice BEFORE signing in, so the auth cookies
+  // Supabase writes during sign-in already get the right lifetime (persistent
+  // vs session). The server client + middleware both read this cookie.
   const remember = formData.get("remember") != null;
   const cookieStore = await cookies();
   cookieStore.set("remember_me", remember ? "1" : "0", {
@@ -42,6 +32,16 @@ export async function login(
     // The flag itself is session-scoped when not remembering, persistent when.
     ...(remember ? { maxAge: 60 * 60 * 24 * 365 } : {}),
   });
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error || !data.user) {
+    return { error: "Incorrect email or password." };
+  }
 
   // Where to land depends on which role table the user actually belongs to —
   // /dashboard requires a `staff` row and /admin requires a `super_admins`

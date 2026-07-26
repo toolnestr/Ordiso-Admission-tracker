@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { authCookieOptions } from "./rememberCookie";
 
 /**
  * Refreshes the Supabase auth session on every request so server components
@@ -18,21 +19,18 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          // "Remember me" unchecked → keep the auth cookies session-scoped so
-          // they clear when the browser closes. Strip maxAge/expires from the
-          // sb-* auth cookies on every refresh (this runs each request).
+          // "Remember me": checked → give the sb-* auth cookies a real 30-day
+          // maxAge so the session survives a browser restart; unchecked →
+          // strip maxAge/expires so they're session-scoped and clear on close.
+          // Runs on every request, so it holds the choice for the whole session.
           const persist = request.cookies.get("remember_me")?.value !== "0";
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
           response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) => {
-            const opts =
-              !persist && name.startsWith("sb-")
-                ? { ...options, maxAge: undefined, expires: undefined }
-                : options;
-            response.cookies.set(name, value, opts);
-          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, authCookieOptions(name, options, persist)),
+          );
         },
       },
     },
