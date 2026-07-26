@@ -7,12 +7,14 @@ import { SectionHeading } from "./HowItWorks";
 
 const rows: { label: string; free: boolean; premium: boolean }[] = [
   { label: "100 students per admission session", free: true, premium: true },
+  { label: "2 admission sessions per year", free: true, premium: true },
   { label: "Custom drag-and-drop form builder", free: true, premium: true },
   { label: "Public link and QR code sharing", free: true, premium: true },
   { label: "Full dashboard and analytics", free: true, premium: true },
   { label: "Up to 3 staff seats", free: true, premium: true },
   { label: "Interview scheduling and fee tracking", free: true, premium: true },
   { label: "Unlimited students", free: false, premium: true },
+  { label: "Unlimited admission sessions", free: false, premium: true },
   { label: "Unlimited staff seats", free: false, premium: true },
   { label: "Document uploads and viewer", free: false, premium: true },
   { label: "Email automation", free: false, premium: true },
