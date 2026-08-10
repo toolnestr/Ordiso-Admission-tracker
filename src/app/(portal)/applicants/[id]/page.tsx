@@ -265,7 +265,14 @@ export default async function ApplicantDetailPage({
           {applicant.email && <EmailButton email={applicant.email} />}
           <ApplicantActions 
             applicant={applicant}
-            fields={fields ?? []}
+            fields={(fields ?? []).map((f: any) => ({
+              id: f.id,
+              label: f.field_label,
+              type: f.field_type,
+              required: f.is_required,
+              options: f.options,
+              is_document_field: f.is_document_field,
+            }))}
             programs={allPrograms ?? []}
             isAdmin={ctx.role === "Admin"}
           />
