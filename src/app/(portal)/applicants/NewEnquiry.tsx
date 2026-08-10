@@ -44,6 +44,7 @@ export default function NewEnquiry({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<DoneState | null>(null);
+  const [submissionDate, setSubmissionDate] = useState<string>("");
 
   useEffect(() => {
     if (!open) return;
@@ -56,6 +57,7 @@ export default function NewEnquiry({
     setStudents([newStudent()]);
     setShared({});
     setFamilyLabel("");
+    setSubmissionDate("");
     setError(null);
     setDone(null);
   }
@@ -95,6 +97,7 @@ export default function NewEnquiry({
         p_phone: phone,
         p_program_id: students[0].programId || null,
         p_source: "Manual",
+        p_created_at: submissionDate ? new Date(submissionDate).toISOString() : undefined,
       });
       setSubmitting(false);
       const res = data as {
@@ -125,6 +128,7 @@ export default function NewEnquiry({
       p_family_label: familyLabel,
       p_students: toGroupPayload(students, fields, shared),
       p_source: "Manual",
+      p_created_at: submissionDate ? new Date(submissionDate).toISOString() : undefined,
     });
     setSubmitting(false);
     const res = data as {
@@ -229,6 +233,22 @@ export default function NewEnquiry({
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="mt-5">
+                <div className="mb-6">
+                  <label className="mb-1.5 block text-[13px] font-medium text-muted-strong uppercase tracking-wider">
+                    Enquiry Date
+                  </label>
+                  <input
+                    type="date"
+                    value={submissionDate}
+                    onChange={(e) => setSubmissionDate(e.target.value)}
+                    max={new Date().toLocaleDateString('en-CA')}
+                    className="w-full rounded-lg border border-[var(--border)] bg-background px-3 py-2 text-[13px] text-foreground focus:border-foreground focus:outline-none focus:ring-1 focus:ring-foreground max-w-[200px]"
+                  />
+                  <p className="mt-1.5 text-[12px] text-muted">
+                    Defaults to today. Change this to log previous days' enquiries.
+                  </p>
+                </div>
+
                 <StudentBlocks
                   fields={fields}
                   programs={programs}
