@@ -41,10 +41,9 @@ const STAGE_ORDER = [
 ];
 
 /** Map a pipeline stage to its ramp step by position, so color follows the
- *  stage — never its rank/count. Confirmed-Partial shares Confirmed's step. */
+ *  stage — never its rank/count. */
 export function stageColor(stage: string): string {
-  const s = stage === "Confirmed-Partial" ? "Confirmed" : stage;
-  const i = STAGE_ORDER.indexOf(s);
+  const i = STAGE_ORDER.indexOf(stage);
   return PIPELINE_RAMP[i === -1 ? 0 : Math.min(i, PIPELINE_RAMP.length - 1)];
 }
 

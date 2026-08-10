@@ -88,7 +88,6 @@ const STATUS_STYLE: Record<string, string> = {
   Interview: "badge-amber",
   Admitted: "badge-blue",
   Confirmed: "badge-green",
-  "Confirmed-Partial": "badge-green",
   Rejected: "badge-red",
 };
 

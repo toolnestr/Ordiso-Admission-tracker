@@ -31,8 +31,7 @@ function summarize(rows: Row[]) {
     byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
     bySource[r.source] = (bySource[r.source] ?? 0) + 1;
   }
-  const confirmed =
-    (byStatus["Confirmed"] ?? 0) + (byStatus["Confirmed-Partial"] ?? 0);
+  const confirmed = byStatus["Confirmed"] ?? 0;
   return {
     total: rows.length,
     byStatus,
@@ -58,7 +57,6 @@ const STATUS_BADGE: Record<string, string> = {
   Interview: "badge-amber",
   Admitted: "badge-blue",
   Confirmed: "badge-green",
-  "Confirmed-Partial": "badge-green",
   Rejected: "badge-red",
 };
 

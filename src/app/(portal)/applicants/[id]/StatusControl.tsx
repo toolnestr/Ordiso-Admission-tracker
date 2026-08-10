@@ -43,11 +43,9 @@ export default function StatusControl({
           </span>
           <div>
             <div className="text-[14px] font-medium">
-              {status === "Confirmed-Partial"
-                ? "Admission confirmed — partial payment"
-                : "Admission confirmed"}
+              Admission confirmed
             </div>
-            {status === "Confirmed-Partial" && totalDue > 0 && (
+            {totalDue > 0 && (
               <div className="mt-0.5 text-[13px] text-amber-300">
                 {currency}
                 {totalDue} still outstanding

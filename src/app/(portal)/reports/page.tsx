@@ -36,7 +36,6 @@ const PIPELINE = [
   "Interview",
   "Admitted",
   "Confirmed",
-  "Confirmed-Partial",
   "Rejected",
 ];
 
@@ -69,8 +68,7 @@ function summarize(
     }
   }
 
-  const confirmed =
-    (byStatus["Confirmed"] ?? 0) + (byStatus["Confirmed-Partial"] ?? 0);
+  const confirmed = byStatus["Confirmed"] ?? 0;
 
   return {
     total: rows.length,

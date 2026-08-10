@@ -19,7 +19,6 @@ const PIPELINE = [
   "Interview",
   "Admitted",
   "Confirmed",
-  "Confirmed-Partial",
   "Rejected",
 ] as const;
 
@@ -45,7 +44,7 @@ export async function updateStatus(
 
   // Confirmation is not a plain status change — it must go through the
   // confirm actions so a reason is recorded (Section 2.4).
-  if (status === "Confirmed" || status === "Confirmed-Partial") return;
+  if (status === "Confirmed") return;
 
   // A rejection reason is mandatory — the UI enforces it too, this is the
   // server-side guard against an empty reason slipping through.
@@ -439,9 +438,7 @@ export async function unwaiveFee(feeId: string, applicantId: string) {
 }
 
 /**
- * Admin override confirm. Requires a reason. If a balance is still due the
- * status is Confirmed-Partial so it's never conflated with a fully-paid
- * confirmation (Section 2.4).
+ * Admin override confirm. Requires a reason.
  */
 export async function manualConfirm(
   _prev: ActionState,
@@ -465,7 +462,7 @@ export async function manualConfirm(
   const balanceDue = (fees ?? []).some(
     (f) => f.status !== "Paid" && f.status !== "Waived",
   );
-  const status = balanceDue ? "Confirmed-Partial" : "Confirmed";
+  const status = "Confirmed";
 
   const { error } = await supabase
     .from("applicants")

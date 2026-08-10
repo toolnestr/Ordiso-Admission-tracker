@@ -34,7 +34,6 @@ export function statusEmailKind(status: string): EmailKind | null {
     case "Admitted":
       return "admitted";
     case "Confirmed":
-    case "Confirmed-Partial":
       return "confirmed";
     case "Rejected":
       return "rejected";
