@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MoreHorizontal, Edit, Trash2, AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
 import { deleteApplicant, updateApplicant } from "./actions";
 import type { PublicField } from "@/components/enquiry/fields";
-import { FieldRenderer, deriveContact, isSharedField } from "@/components/enquiry/fields";
+import { FieldRenderer, deriveContact } from "@/components/enquiry/fields";
 import Select from "@/components/ui/Select";
 
 export default function ApplicantActions({
