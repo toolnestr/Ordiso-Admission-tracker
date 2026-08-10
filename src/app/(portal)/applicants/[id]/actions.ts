@@ -856,3 +856,61 @@ export async function addCommunication(
   refresh(applicantId);
   return { error: null };
 }
+
+export async function deleteApplicant(applicantId: string) {
+  const ctx = await getPortalContext();
+  if (ctx.role !== "Admin") {
+    throw new Error("Only Admins can delete an applicant.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("applicants").delete().eq("id", applicantId);
+  if (error) throw new Error("Could not delete applicant.");
+  
+  // Note: we explicitly do NOT decrement `total_applications_received` on the session
+  // to prevent gaming the free tier.
+  
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId: null,
+    staffId: ctx.staffId,
+    actionType: "applicant_deleted",
+    description: `Applicant deleted (ID: ${applicantId})`,
+  });
+}
+
+export async function updateApplicant(
+  applicantId: string,
+  formData: Record<string, unknown>,
+  email: string | null,
+  phone: string | null,
+  programId: string | null
+) {
+  const ctx = await getPortalContext();
+  if (ctx.role === "Viewer") {
+    throw new Error("You don't have permission to edit.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("applicants")
+    .update({
+      form_data: formData,
+      email,
+      phone,
+      program_id: programId,
+    })
+    .eq("id", applicantId);
+
+  if (error) throw new Error("Could not update applicant.");
+
+  await logActivity({
+    instituteId: ctx.institute.id,
+    applicantId,
+    staffId: ctx.staffId,
+    actionType: "applicant_updated",
+    description: "Applicant information updated",
+  });
+
+  refresh(applicantId);
+}

@@ -7,6 +7,7 @@ import { sourceLabel } from "@/components/charts/palette";
 import StatusControl from "./StatusControl";
 import DetailTabs from "./DetailTabs";
 import EmailButton from "./EmailButton";
+import ApplicantActions from "./ApplicantActions";
 
 const STATUS_STYLE: Record<string, string> = {
   Applied: "badge-neutral",
@@ -41,7 +42,7 @@ export default async function ApplicantDetailPage({
   const { data: applicant } = await supabase
     .from("applicants")
     .select(
-      "id, application_id, form_data, email, phone, status, source, created_at, confirmed_at, confirmation_reason, fee_exempt, fee_exempt_reason, family_id, family_label, family_code, programs(name)",
+      "id, application_id, form_data, email, phone, status, source, created_at, confirmed_at, confirmation_reason, fee_exempt, fee_exempt_reason, family_id, family_label, family_code, program_id, programs(name)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -96,6 +97,8 @@ export default async function ApplicantDetailPage({
     { data: comms },
     { data: activity },
     { data: followUps },
+    { data: fields },
+    { data: allPrograms },
   ] = await Promise.all([
       supabase
         .from("applicant_fees")
@@ -132,6 +135,15 @@ export default async function ApplicantDetailPage({
             : [applicant.id],
         )
         .order("due_date", { ascending: false }),
+      supabase
+        .from("form_fields")
+        .select("*")
+        .eq("institute_id", ctx.institute.id)
+        .order("display_order", { ascending: true }),
+      supabase
+        .from("programs")
+        .select("id, name")
+        .eq("institute_id", ctx.institute.id),
     ]);
 
   // Documents (Premium): fetch rows, then mint short-lived signed URLs from the
@@ -251,6 +263,12 @@ export default async function ApplicantDetailPage({
             </>
           )}
           {applicant.email && <EmailButton email={applicant.email} />}
+          <ApplicantActions 
+            applicant={applicant}
+            fields={fields ?? []}
+            programs={allPrograms ?? []}
+            isAdmin={ctx.role === "Admin"}
+          />
         </div>
       </div>
 
