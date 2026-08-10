@@ -14,6 +14,7 @@ import StudentBlocks, {
   mergedValues,
   type Student,
 } from "@/components/enquiry/StudentBlocks";
+import DatePicker from "@/components/ui/DatePicker";
 
 type CreatedStudent = { application_id: string; possible_duplicate: boolean };
 type DoneState = { students: CreatedStudent[]; familyCode?: string };
@@ -237,13 +238,13 @@ export default function NewEnquiry({
                   <label className="mb-1.5 block text-[13px] font-medium text-muted-strong uppercase tracking-wider">
                     Enquiry Date
                   </label>
-                  <input
-                    type="date"
-                    value={submissionDate}
-                    onChange={(e) => setSubmissionDate(e.target.value)}
-                    max={new Date().toLocaleDateString('en-CA')}
-                    className="w-full rounded-lg border border-[var(--border)] bg-background px-3 py-2 text-[13px] text-foreground focus:border-foreground focus:outline-none focus:ring-1 focus:ring-foreground max-w-[200px]"
-                  />
+                  <div className="max-w-[200px]">
+                    <DatePicker
+                      value={submissionDate}
+                      onChange={setSubmissionDate}
+                      placeholder="Today"
+                    />
+                  </div>
                   <p className="mt-1.5 text-[12px] text-muted">
                     Defaults to today. Change this to log previous days' enquiries.
                   </p>
