@@ -136,16 +136,14 @@ export default async function DashboardPage() {
   const conversion = cur.total > 0 ? Math.round((cur.confirmed / cur.total) * 100) : 0;
   const prevConversion = prev && prev.total > 0 ? Math.round((prev.confirmed / prev.total) * 100) : null;
 
-  // A funnel must count "reached at least this stage" (cumulative), not the
-  // snapshot per-stage count — stages are skippable (Section 2.13), so a later
-  // stage can hold more people than an earlier one, which would make the raw
-  // counts non-monotonic and produce nonsense conversion like ">100%".
+  // Use exact snapshot counts for each stage rather than cumulative, as requested
+  // by users who skip stages and expect accurate snapshot numbers per stage.
+  // "Applied" is kept as total applicants as the starting point of the funnel.
   const stageValue = (s: string) =>
     s === "Confirmed" ? cur.confirmed : cur.byStatus[s] ?? 0;
   const funnelStages = FUNNEL.map((s, i) => ({
     label: s,
-    value:
-      i === 0 ? cur.total : FUNNEL.slice(i).reduce((sum, st) => sum + stageValue(st), 0),
+    value: i === 0 ? cur.total : stageValue(s),
   }));
 
   const statusSlices = FUNNEL.concat("Rejected")

@@ -68,17 +68,15 @@ export default function ReportsView({
     { label: "Manual", value: manualCount },
   ].filter((d) => d.value > 0);
 
-  // Cumulative "reached at least this stage" so the funnel is monotonic even
-  // though stages are skippable (a walk-in can jump straight to Admitted).
+  // Use exact snapshot counts for each stage rather than cumulative, as requested
+  // by users who skip stages and expect accurate snapshot numbers per stage.
+  // "Applied" is kept as total applicants as the starting point of the funnel.
   const FUNNEL = ["Applied", "Shortlisted", "Interview", "Admitted", "Confirmed"];
   const stageValue = (s: string) =>
     s === "Confirmed" ? current.confirmed : current.byStatus[s] ?? 0;
   const funnelStages = FUNNEL.map((s, i) => ({
     label: s,
-    value:
-      i === 0
-        ? current.total
-        : FUNNEL.slice(i).reduce((sum, st) => sum + stageValue(st), 0),
+    value: i === 0 ? current.total : stageValue(s),
   }));
 
   const statusSlices = statusData.map((d) => ({
