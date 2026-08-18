@@ -90,7 +90,8 @@ export default async function FormBuilderPage() {
               </div>
               {ctx.role === "Admin" && (
                 <FieldRowActions
-                  fieldId={f.id}
+                  field={f}
+                  isPremium={isPremium}
                   isFirst={i === 0}
                   isLast={i === list.length - 1}
                 />
