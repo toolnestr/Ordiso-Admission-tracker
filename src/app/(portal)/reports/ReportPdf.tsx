@@ -27,6 +27,17 @@ export type FollowUpReportRow = {
   staffName: string | null;
 };
 
+export type ActivityLogReportRow = {
+  id: string;
+  action_type: string;
+  description: string;
+  reason: string | null;
+  created_at: string;
+  staffName: string | null;
+  applicantName: string | null;
+  applicantId: string | null;
+};
+
 function nameOf(r: ReportRow) {
   const fd = r.form_data;
   if (fd) {
@@ -50,11 +61,66 @@ function d(iso: string | null) {
     : "—";
 }
 
+function ymdOf(iso: string, tz: string) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz || "UTC",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(iso));
+  } catch {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "UTC",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(iso));
+  }
+}
+
+function formatTimeInTz(iso: string, tz: string) {
+  try {
+    return new Date(iso).toLocaleTimeString(undefined, {
+      timeZone: tz || "UTC",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return new Date(iso).toLocaleTimeString(undefined, {
+      timeZone: "UTC",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }
+}
+
+function formatDateInTz(iso: string, tz: string) {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      timeZone: tz || "UTC",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return new Date(iso).toLocaleDateString(undefined, {
+      timeZone: "UTC",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+}
+
 const REPORTS = [
   { key: "audit", label: "Session audit" },
   { key: "admitted", label: "Admitted & confirmed" },
   { key: "rejected", label: "Rejections (with reasons)" },
   { key: "followups", label: "Follow-ups (with remarks)" },
+  { key: "monthly_logs", label: "Monthly activity logs (Today & Date-wise)" },
   { key: "all", label: "All applicants" },
 ] as const;
 
@@ -80,12 +146,16 @@ export default function ReportPdf({
   totals,
   rows,
   followUps = [],
+  activityLogs = [],
+  timezone = "UTC",
 }: {
   instituteName: string;
   session: SessionMeta;
   totals: Totals;
   rows: ReportRow[];
   followUps?: FollowUpReportRow[];
+  activityLogs?: ActivityLogReportRow[];
+  timezone?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -218,6 +288,171 @@ export default function ReportPdf({
               ])
             : [["—", "No follow-ups in this session", "", "", "", "", ""]],
         });
+      } else if (kind === "monthly_logs") {
+        const todayYmd = ymdOf(new Date().toISOString(), timezone);
+        const currentMonthPrefix = todayYmd.slice(0, 7);
+
+        const monthName = new Date().toLocaleDateString(undefined, {
+          timeZone: timezone || "UTC",
+          month: "long",
+          year: "numeric",
+        });
+
+        const todayFormatted = new Date().toLocaleDateString(undefined, {
+          timeZone: timezone || "UTC",
+          weekday: "long",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+
+        const todayLogs = activityLogs.filter(
+          (l) => ymdOf(l.created_at, timezone) === todayYmd,
+        );
+
+        const monthLogs = activityLogs.filter(
+          (l) => ymdOf(l.created_at, timezone).slice(0, 7) === currentMonthPrefix,
+        );
+
+        // Section 1: Today's Activity Logs
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30);
+        doc.text(`1. Today's Activity Logs (${todayFormatted})`, 14, 40);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(`Total actions recorded today: ${todayLogs.length}`, 14, 46);
+
+        autoTable(doc, {
+          startY: 50,
+          headStyles,
+          styles: { fontSize: 8.5, cellPadding: 2.5 },
+          columnStyles: {
+            0: { cellWidth: 10 },
+            1: { cellWidth: 22 },
+            2: { cellWidth: 32 },
+            3: { cellWidth: 38 },
+            4: { cellWidth: 26 },
+            5: { cellWidth: "auto" },
+          },
+          head: [["#", "Time", "Action", "Applicant / Target", "By", "Details & Reason"]],
+          body: todayLogs.length
+            ? todayLogs.map((l, i) => [
+                String(i + 1),
+                formatTimeInTz(l.created_at, timezone),
+                l.action_type,
+                l.applicantName
+                  ? `${l.applicantName}${l.applicantId ? ` (${l.applicantId})` : ""}`
+                  : "—",
+                l.staffName || "System",
+                l.reason ? `${l.description}\nReason: ${l.reason}` : l.description,
+              ])
+            : [["—", "—", "No activity logs recorded for today", "—", "—", "—"]],
+        });
+
+        // Section 2: Current Month Date-wise Log Report
+        const afterTodayY = (doc as unknown as { lastAutoTable: { finalY: number } })
+          .lastAutoTable.finalY;
+
+        let nextY = afterTodayY + 12;
+        if (nextY > 250) {
+          doc.addPage();
+          nextY = 20;
+        }
+
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30);
+        doc.text(`2. Current Month Activity Logs (${monthName} — Date-wise)`, 14, nextY);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(
+          `Total actions recorded in ${monthName}: ${monthLogs.length}`,
+          14,
+          nextY + 6,
+        );
+
+        // Daily Summary Table
+        const dateGroups: Record<string, { date: string; count: number; staffSet: Set<string> }> = {};
+        for (const l of monthLogs) {
+          const ymd = ymdOf(l.created_at, timezone);
+          if (!dateGroups[ymd]) {
+            dateGroups[ymd] = { date: ymd, count: 0, staffSet: new Set() };
+          }
+          dateGroups[ymd].count += 1;
+          if (l.staffName) dateGroups[ymd].staffSet.add(l.staffName);
+        }
+
+        const dateSummaryList = Object.values(dateGroups).sort((a, b) =>
+          b.date.localeCompare(a.date),
+        );
+
+        autoTable(doc, {
+          startY: nextY + 10,
+          headStyles: { fillColor: [100, 100, 140], textColor: 255 },
+          styles: { fontSize: 8.5, cellPadding: 2 },
+          columnStyles: {
+            0: { cellWidth: 35 },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 30 },
+            3: { cellWidth: "auto" },
+          },
+          head: [["Date", "Day", "Total Actions", "Active Staff"]],
+          body: dateSummaryList.length
+            ? dateSummaryList.map((g) => {
+                const dObj = new Date(g.date + "T12:00:00");
+                const dayName = dObj.toLocaleDateString(undefined, { weekday: "long" });
+                return [
+                  fmtYmd(g.date),
+                  dayName,
+                  String(g.count),
+                  g.staffSet.size > 0 ? Array.from(g.staffSet).join(", ") : "System",
+                ];
+              })
+            : [["—", "—", "0", "No logs recorded for this month"]],
+        });
+
+        // Detailed date-wise table
+        const afterSummaryY = (doc as unknown as { lastAutoTable: { finalY: number } })
+          .lastAutoTable.finalY;
+
+        let nextDetailY = afterSummaryY + 10;
+        if (nextDetailY > 250) {
+          doc.addPage();
+          nextDetailY = 20;
+        }
+
+        doc.setFontSize(10.5);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(50);
+        doc.text("Complete Month Detailed Logs:", 14, nextDetailY);
+
+        autoTable(doc, {
+          startY: nextDetailY + 4,
+          headStyles,
+          styles: { fontSize: 8.5, cellPadding: 2.5 },
+          columnStyles: {
+            0: { cellWidth: 28 },
+            1: { cellWidth: 32 },
+            2: { cellWidth: 38 },
+            3: { cellWidth: 26 },
+            4: { cellWidth: "auto" },
+          },
+          head: [["Date & Time", "Action", "Applicant / Target", "By", "Details & Reason"]],
+          body: monthLogs.length
+            ? monthLogs.map((l) => [
+                `${formatDateInTz(l.created_at, timezone)}\n${formatTimeInTz(l.created_at, timezone)}`,
+                l.action_type,
+                l.applicantName
+                  ? `${l.applicantName}${l.applicantId ? ` (${l.applicantId})` : ""}`
+                  : "—",
+                l.staffName || "System",
+                l.reason ? `${l.description}\nReason: ${l.reason}` : l.description,
+              ])
+            : [["—", "No activity logs recorded for this month", "—", "—", "—"]],
+        });
       } else {
         autoTable(doc, {
           ...opts,
@@ -257,7 +492,7 @@ export default function ReportPdf({
         <ChevronDown className="h-3.5 w-3.5 text-muted" />
       </button>
       {open && (
-        <div className="absolute left-0 z-30 mt-1.5 w-56 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border-strong bg-[#12121a] p-1 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.85)] sm:left-auto sm:right-0">
+        <div className="absolute left-0 z-30 mt-1.5 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border-strong bg-[#12121a] p-1 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.85)] sm:left-auto sm:right-0">
           {REPORTS.map((r) => (
             <button
               key={r.key}

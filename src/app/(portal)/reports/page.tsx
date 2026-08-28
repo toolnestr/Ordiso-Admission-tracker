@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getPortalContext } from "@/lib/portal";
-import { fetchSessionFollowUps } from "@/lib/followups";
+import { fetchSessionFollowUps, ymdInTz } from "@/lib/followups";
 import ReportsView from "./ReportsView";
-import type { FollowUpReportRow } from "./ReportPdf";
+import type { FollowUpReportRow, ActivityLogReportRow } from "./ReportPdf";
 
 function displayName(form_data: Record<string, unknown> | null, fallback: string) {
   if (form_data) {
@@ -80,6 +80,16 @@ function summarize(
   };
 }
 
+function getMonthQueryTimestamp() {
+  const d = new Date();
+  d.setDate(d.getDate() - 35);
+  return d.toISOString();
+}
+
+function getTodayYmd(tz: string) {
+  return ymdInTz(new Date(), tz);
+}
+
 export default async function ReportsPage({
   searchParams,
 }: {
@@ -114,7 +124,12 @@ export default async function ReportsPage({
   const selectedIdx = list.findIndex((s) => s.id === selected.id);
   const previous = list[selectedIdx + 1] ?? null; // next-oldest
 
-  const [{ data: curRows }, { data: prevRows }] = await Promise.all([
+  const [
+    { data: curRows },
+    { data: prevRows },
+    { data: inst },
+    { data: rawActivityLogs },
+  ] = await Promise.all([
     supabase
       .from("applicants")
       .select("status, source, created_at")
@@ -125,7 +140,46 @@ export default async function ReportsPage({
           .select("status, source, created_at")
           .eq("session_id", previous.id)
       : Promise.resolve({ data: [] as never[] }),
+    supabase
+      .from("institutes")
+      .select("timezone")
+      .eq("id", ctx.institute.id)
+      .maybeSingle(),
+    supabase
+      .from("activity_log")
+      .select(
+        "id, action_type, description, reason, created_at, staff:staff_id(name), applicant:applicant_id(id, application_id, form_data)",
+      )
+      .eq("institute_id", ctx.institute.id)
+      .gte("created_at", getMonthQueryTimestamp())
+      .order("created_at", { ascending: false }),
   ]);
+
+  const timezone = inst?.timezone ?? "UTC";
+  const todayYmd = getTodayYmd(timezone);
+  const currentMonthPrefix = todayYmd.slice(0, 7);
+
+  const activityLogs: ActivityLogReportRow[] = (rawActivityLogs ?? [])
+    .filter((r) => ymdInTz(new Date(r.created_at), timezone).startsWith(currentMonthPrefix))
+    .map((r) => {
+      const app = Array.isArray(r.applicant) ? r.applicant[0] : r.applicant;
+      const st = Array.isArray(r.staff) ? r.staff[0] : r.staff;
+      return {
+        id: r.id,
+        action_type: r.action_type,
+        description: r.description,
+        reason: r.reason,
+        created_at: r.created_at,
+        staffName: st?.name ?? null,
+        applicantName: app
+          ? displayName(
+              app.form_data as Record<string, unknown> | null,
+              app.application_id,
+            )
+          : null,
+        applicantId: app?.application_id ?? null,
+      };
+    });
 
   const current = summarize(curRows ?? [], selected);
   const prior = previous ? summarize(prevRows ?? [], previous) : null;
@@ -164,6 +218,8 @@ export default async function ReportsPage({
         instituteName={ctx.institute.display_name}
         rows={(detailRows ?? []) as never[]}
         followUps={followUps}
+        activityLogs={activityLogs}
+        timezone={timezone}
       />
     </div>
   );

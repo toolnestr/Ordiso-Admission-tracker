@@ -9,7 +9,11 @@ import Funnel from "@/components/charts/Funnel";
 import AreaChart from "@/components/charts/AreaChart";
 import { stageColor, sourceColor } from "@/components/charts/palette";
 import ScreenshotButton from "@/components/portal/ScreenshotButton";
-import ReportPdf, { type ReportRow, type FollowUpReportRow } from "./ReportPdf";
+import ReportPdf, {
+  type ReportRow,
+  type FollowUpReportRow,
+  type ActivityLogReportRow,
+} from "./ReportPdf";
 import type { SessionMeta, Totals } from "./page";
 
 function fmtDay(iso: string) {
@@ -29,6 +33,8 @@ export default function ReportsView({
   instituteName,
   rows,
   followUps,
+  activityLogs = [],
+  timezone = "UTC",
 }: {
   sessions: SessionMeta[];
   selected: SessionMeta;
@@ -39,6 +45,8 @@ export default function ReportsView({
   instituteName: string;
   rows: ReportRow[];
   followUps: FollowUpReportRow[];
+  activityLogs?: ActivityLogReportRow[];
+  timezone?: string;
 }) {
   const router = useRouter();
 
@@ -147,6 +155,8 @@ export default function ReportsView({
             totals={current}
             rows={rows}
             followUps={followUps}
+            activityLogs={activityLogs}
+            timezone={timezone}
           />
           <ScreenshotButton targetId="reports-capture" filePrefix="ordiso-report" />
           <button
