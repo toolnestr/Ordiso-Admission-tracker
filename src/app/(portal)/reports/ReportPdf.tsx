@@ -38,19 +38,64 @@ export type ActivityLogReportRow = {
   applicantId: string | null;
 };
 
+/** Clean text of Unicode glyphs (arrows, smart quotes, em-dashes) that break jsPDF Helvetica metrics */
+function cleanPdfText(str: string | null | undefined): string {
+  if (!str) return "—";
+  return str
+    .replace(/[\u2190-\u2195\u2794\u279C\u21D0-\u21D5]/g, "->") // arrows (e.g. Applied → Admitted)
+    .replace(/[\u2014\u2015]/g, " - ") // em dash
+    .replace(/[\u2012\u2013]/g, "-") // en dash
+    .replace(/[\u2018\u2019]/g, "'") // smart single quotes
+    .replace(/[\u201C\u201D]/g, '"') // smart double quotes
+    .replace(/[\u2026]/g, "...") // ellipsis
+    .replace(/[^\x20-\x7E\r\n\t]/g, " ") // replace non-ASCII characters with spaces
+    .replace(/ +/g, " ")
+    .trim();
+}
+
+function formatActionType(action: string): string {
+  const map: Record<string, string> = {
+    status_change: "Status Change",
+    admission_confirmed: "Admission Confirmed",
+    follow_up_completed: "Follow-up Done",
+    follow_up_scheduled: "Follow-up Added",
+    applicant_created: "Applicant Created",
+    applicant_imported: "Applicant Imported",
+    applicant_updated: "Applicant Updated",
+    note_added: "Note Added",
+    interview_scheduled: "Interview Scheduled",
+    interview_updated: "Interview Updated",
+  };
+  if (map[action]) return map[action];
+  return action
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatLogDetails(description: string, reason: string | null): string {
+  const cleanDesc = cleanPdfText(description);
+  if (!reason || !reason.trim()) return cleanDesc;
+  const cleanReas = cleanPdfText(reason);
+  return `${cleanDesc}\nReason: ${cleanReas}`;
+}
+
 function nameOf(r: ReportRow) {
   const fd = r.form_data;
   if (fd) {
     for (const [k, v] of Object.entries(fd)) {
-      if (/name/i.test(k) && typeof v === "string" && v.trim()) return v.trim();
+      if (/name/i.test(k) && typeof v === "string" && v.trim()) {
+        return cleanPdfText(v.trim());
+      }
     }
   }
-  return r.application_id;
+  return cleanPdfText(r.application_id);
 }
+
 function programOf(r: ReportRow) {
   const p = Array.isArray(r.programs) ? r.programs[0] : r.programs;
-  return p?.name ?? "—";
+  return cleanPdfText(p?.name ?? "—");
 }
+
 function d(iso: string | null) {
   return iso
     ? new Date(iso).toLocaleDateString(undefined, {
@@ -176,15 +221,16 @@ export default function ReportPdf({
     try {
       const { jsPDF } = await import("jspdf");
       const autoTable = (await import("jspdf-autotable")).default;
-      const doc = new jsPDF();
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
       const accent: [number, number, number] = [124, 116, 255];
+      const pageMargin = { left: 14, right: 14 };
 
       const title = REPORTS.find((r) => r.key === kind)!.label;
       doc.setFontSize(16);
-      doc.text(instituteName, 14, 18);
+      doc.text(cleanPdfText(instituteName), 14, 18);
       doc.setFontSize(11);
       doc.setTextColor(90);
-      doc.text(`${title} — ${session.name}`, 14, 25);
+      doc.text(`${cleanPdfText(title)} - ${cleanPdfText(session.name)}`, 14, 25);
       doc.setFontSize(9);
       doc.setTextColor(140);
       doc.text(
@@ -195,11 +241,17 @@ export default function ReportPdf({
       doc.setTextColor(0);
 
       const headStyles = { fillColor: accent, textColor: 255 };
-      const opts = { startY: 38, headStyles, styles: { fontSize: 9 } };
+      const opts = {
+        startY: 38,
+        margin: pageMargin,
+        headStyles,
+        styles: { fontSize: 8.5, overflow: "linebreak" as const, valign: "top" as const },
+      };
 
       if (kind === "audit") {
         autoTable(doc, {
           ...opts,
+          margin: pageMargin,
           head: [["Metric", "Value"]],
           body: [
             ["Total applicants", String(totals.total)],
@@ -209,30 +261,32 @@ export default function ReportPdf({
               "Conversion",
               `${totals.total ? Math.round((totals.confirmed / totals.total) * 100) : 0}%`,
             ],
-            ["Session window", `${d(session.start_date)} – ${d(session.end_date)}`],
+            ["Session window", `${d(session.start_date)} - ${d(session.end_date)}`],
           ],
         });
         const byStage = Object.entries(totals.byStatus).map(([s, n]) => [
-          s,
+          cleanPdfText(s),
           String(n),
         ]);
         autoTable(doc, {
           startY: (doc as unknown as { lastAutoTable: { finalY: number } })
             .lastAutoTable.finalY + 8,
+          margin: pageMargin,
           headStyles,
-          styles: { fontSize: 9 },
+          styles: { fontSize: 8.5, overflow: "linebreak", valign: "top" },
           head: [["Stage", "Applicants"]],
           body: byStage.length ? byStage : [["—", "0"]],
         });
         const bySource = Object.entries(totals.bySource).map(([s, n]) => [
-          s,
+          cleanPdfText(s),
           String(n),
         ]);
         autoTable(doc, {
           startY: (doc as unknown as { lastAutoTable: { finalY: number } })
             .lastAutoTable.finalY + 8,
+          margin: pageMargin,
           headStyles,
-          styles: { fontSize: 9 },
+          styles: { fontSize: 8.5, overflow: "linebreak", valign: "top" },
           head: [["Source", "Applicants"]],
           body: bySource.length ? bySource : [["—", "0"]],
         });
@@ -242,12 +296,20 @@ export default function ReportPdf({
         );
         autoTable(doc, {
           ...opts,
+          margin: pageMargin,
+          columnStyles: {
+            0: { cellWidth: 12, halign: "center" },
+            1: { cellWidth: 50 },
+            2: { cellWidth: 50 },
+            3: { cellWidth: 35 },
+            4: { cellWidth: 35 },
+          },
           head: [["#", "Name", "Program", "Status", "Confirmed"]],
           body: list.map((r, i) => [
             String(i + 1),
             nameOf(r),
             programOf(r),
-            r.status,
+            cleanPdfText(r.status),
             d(r.confirmed_at),
           ]),
         });
@@ -255,12 +317,20 @@ export default function ReportPdf({
         const list = rows.filter((r) => r.status === "Rejected");
         autoTable(doc, {
           ...opts,
+          margin: pageMargin,
+          columnStyles: {
+            0: { cellWidth: 12, halign: "center" },
+            1: { cellWidth: 45 },
+            2: { cellWidth: 40 },
+            3: { cellWidth: 55 },
+            4: { cellWidth: 30 },
+          },
           head: [["#", "Name", "Program", "Reason", "Date"]],
           body: list.map((r, i) => [
             String(i + 1),
             nameOf(r),
             programOf(r),
-            r.rejection_reason || "—",
+            cleanPdfText(r.rejection_reason || "—"),
             d(r.created_at),
           ]),
         });
@@ -272,19 +342,28 @@ export default function ReportPdf({
         );
         autoTable(doc, {
           ...opts,
-          columnStyles: { 6: { cellWidth: 42 } },
+          margin: pageMargin,
+          columnStyles: {
+            0: { cellWidth: 10, halign: "center" },
+            1: { cellWidth: 35 },
+            2: { cellWidth: 25 },
+            3: { cellWidth: 28 },
+            4: { cellWidth: 22 },
+            5: { cellWidth: 20 },
+            6: { cellWidth: 42 },
+          },
           head: [
             ["#", "Student", "Family", "Contact", "Due", "Status", "Remark"],
           ],
           body: list.length
             ? list.map((r, i) => [
                 String(i + 1),
-                r.name,
-                r.familyLabel || "—",
-                r.contact || "—",
+                cleanPdfText(r.name),
+                cleanPdfText(r.familyLabel || "—"),
+                cleanPdfText(r.contact || "—"),
                 fmtYmd(r.dueDate),
-                r.status,
-                r.remark || "—",
+                cleanPdfText(r.status),
+                cleanPdfText(r.remark || "—"),
               ])
             : [["—", "No follow-ups in this session", "", "", "", "", ""]],
         });
@@ -324,29 +403,31 @@ export default function ReportPdf({
         doc.setTextColor(100);
         doc.text(`Total actions recorded today: ${todayLogs.length}`, 14, 46);
 
+        // Table width: 8 + 18 + 28 + 34 + 20 + 74 = 182mm (fits exactly in 210mm A4 width with 14mm margins)
         autoTable(doc, {
           startY: 50,
+          margin: pageMargin,
           headStyles,
-          styles: { fontSize: 8.5, cellPadding: 2.5 },
+          styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak", valign: "top" },
           columnStyles: {
-            0: { cellWidth: 10 },
-            1: { cellWidth: 22 },
-            2: { cellWidth: 32 },
-            3: { cellWidth: 38 },
-            4: { cellWidth: 26 },
-            5: { cellWidth: "auto" },
+            0: { cellWidth: 8, halign: "center" },
+            1: { cellWidth: 18 },
+            2: { cellWidth: 28 },
+            3: { cellWidth: 34 },
+            4: { cellWidth: 20 },
+            5: { cellWidth: 74 },
           },
           head: [["#", "Time", "Action", "Applicant / Target", "By", "Details & Reason"]],
           body: todayLogs.length
             ? todayLogs.map((l, i) => [
                 String(i + 1),
                 formatTimeInTz(l.created_at, timezone),
-                l.action_type,
+                formatActionType(l.action_type),
                 l.applicantName
-                  ? `${l.applicantName}${l.applicantId ? ` (${l.applicantId})` : ""}`
+                  ? `${cleanPdfText(l.applicantName)}${l.applicantId ? ` (${l.applicantId})` : ""}`
                   : "—",
-                l.staffName || "System",
-                l.reason ? `${l.description}\nReason: ${l.reason}` : l.description,
+                cleanPdfText(l.staffName || "System"),
+                formatLogDetails(l.description, l.reason),
               ])
             : [["—", "—", "No activity logs recorded for today", "—", "—", "—"]],
         });
@@ -356,7 +437,7 @@ export default function ReportPdf({
           .lastAutoTable.finalY;
 
         let nextY = afterTodayY + 12;
-        if (nextY > 250) {
+        if (nextY > 240) {
           doc.addPage();
           nextY = 20;
         }
@@ -364,7 +445,7 @@ export default function ReportPdf({
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(30);
-        doc.text(`2. Current Month Activity Logs (${monthName} — Date-wise)`, 14, nextY);
+        doc.text(`2. Current Month Activity Logs (${monthName} - Date-wise)`, 14, nextY);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         doc.setTextColor(100);
@@ -382,22 +463,24 @@ export default function ReportPdf({
             dateGroups[ymd] = { date: ymd, count: 0, staffSet: new Set() };
           }
           dateGroups[ymd].count += 1;
-          if (l.staffName) dateGroups[ymd].staffSet.add(l.staffName);
+          if (l.staffName) dateGroups[ymd].staffSet.add(cleanPdfText(l.staffName));
         }
 
         const dateSummaryList = Object.values(dateGroups).sort((a, b) =>
           b.date.localeCompare(a.date),
         );
 
+        // Summary table width: 32 + 28 + 24 + 98 = 182mm
         autoTable(doc, {
           startY: nextY + 10,
+          margin: pageMargin,
           headStyles: { fillColor: [100, 100, 140], textColor: 255 },
-          styles: { fontSize: 8.5, cellPadding: 2 },
+          styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak", valign: "top" },
           columnStyles: {
-            0: { cellWidth: 35 },
-            1: { cellWidth: 35 },
-            2: { cellWidth: 30 },
-            3: { cellWidth: "auto" },
+            0: { cellWidth: 32 },
+            1: { cellWidth: 28 },
+            2: { cellWidth: 24, halign: "center" },
+            3: { cellWidth: 98 },
           },
           head: [["Date", "Day", "Total Actions", "Active Staff"]],
           body: dateSummaryList.length
@@ -419,7 +502,7 @@ export default function ReportPdf({
           .lastAutoTable.finalY;
 
         let nextDetailY = afterSummaryY + 10;
-        if (nextDetailY > 250) {
+        if (nextDetailY > 240) {
           doc.addPage();
           nextDetailY = 20;
         }
@@ -429,46 +512,57 @@ export default function ReportPdf({
         doc.setTextColor(50);
         doc.text("Complete Month Detailed Logs:", 14, nextDetailY);
 
+        // Detailed table width: 24 + 28 + 34 + 20 + 76 = 182mm
         autoTable(doc, {
           startY: nextDetailY + 4,
+          margin: pageMargin,
           headStyles,
-          styles: { fontSize: 8.5, cellPadding: 2.5 },
+          styles: { fontSize: 8, cellPadding: 2, overflow: "linebreak", valign: "top" },
           columnStyles: {
-            0: { cellWidth: 28 },
-            1: { cellWidth: 32 },
-            2: { cellWidth: 38 },
-            3: { cellWidth: 26 },
-            4: { cellWidth: "auto" },
+            0: { cellWidth: 24 },
+            1: { cellWidth: 28 },
+            2: { cellWidth: 34 },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 76 },
           },
           head: [["Date & Time", "Action", "Applicant / Target", "By", "Details & Reason"]],
           body: monthLogs.length
             ? monthLogs.map((l) => [
                 `${formatDateInTz(l.created_at, timezone)}\n${formatTimeInTz(l.created_at, timezone)}`,
-                l.action_type,
+                formatActionType(l.action_type),
                 l.applicantName
-                  ? `${l.applicantName}${l.applicantId ? ` (${l.applicantId})` : ""}`
+                  ? `${cleanPdfText(l.applicantName)}${l.applicantId ? ` (${l.applicantId})` : ""}`
                   : "—",
-                l.staffName || "System",
-                l.reason ? `${l.description}\nReason: ${l.reason}` : l.description,
+                cleanPdfText(l.staffName || "System"),
+                formatLogDetails(l.description, l.reason),
               ])
             : [["—", "No activity logs recorded for this month", "—", "—", "—"]],
         });
       } else {
         autoTable(doc, {
           ...opts,
+          margin: pageMargin,
+          columnStyles: {
+            0: { cellWidth: 28 },
+            1: { cellWidth: 42 },
+            2: { cellWidth: 42 },
+            3: { cellWidth: 24 },
+            4: { cellWidth: 22 },
+            5: { cellWidth: 24 },
+          },
           head: [["ID", "Name", "Program", "Status", "Source", "Applied"]],
           body: rows.map((r) => [
-            r.application_id,
+            cleanPdfText(r.application_id),
             nameOf(r),
             programOf(r),
-            r.status,
+            cleanPdfText(r.status),
             sourceLabel(r.source),
             d(r.created_at),
           ]),
         });
       }
 
-      const slug = `${instituteName}-${session.name}-${title}`
+      const slug = `${cleanPdfText(instituteName)}-${cleanPdfText(session.name)}-${cleanPdfText(title)}`
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
